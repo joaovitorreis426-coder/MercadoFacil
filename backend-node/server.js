@@ -203,7 +203,3 @@ app.listen(PORT, () => console.log(`🔥 Servidor com Descrição rodando na por
 // 🔹 Servir Angular
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 🔹 Qualquer rota que não seja /api vai para o Angular
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
