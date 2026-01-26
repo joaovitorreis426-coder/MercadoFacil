@@ -69,24 +69,24 @@ import { AuthService } from '../../../core/services/auth.service';
             @if (showForm) {
               <div class="bg-white rounded-xl border p-6 shadow-lg mb-6 animate-in slide-in-from-top-4">
                 <h3 class="text-lg font-bold mb-4">{{ isEditing ? 'Editar' : 'Novo' }} Produto</h3>
-                <div class="grid gap-6 md:grid-cols-3">
-                  <div>
+                <div class="grid gap-6 md:grid-cols-2">
+                  
+                  <div class="col-span-2 md:col-span-1">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-                    <input type="text" [(ngModel)]="currentProduct.name" 
-                      class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
-                      [class.border-red-500]="!currentProduct.name">
+                    <input type="text" [(ngModel)]="currentProduct.name" class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" [class.border-red-500]="!currentProduct.name">
                   </div>
                   
-                  <div>
+                  <div class="col-span-2 md:col-span-1">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Preço (R$) *</label>
-                    <input type="text" 
-                      [ngModel]="currentProduct.price" 
-                      (ngModelChange)="applyCurrencyMask($event)"
-                      placeholder="0,00"
-                      class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" [ngModel]="currentProduct.price" (ngModelChange)="applyCurrencyMask($event)" placeholder="0,00" class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
                   </div>
 
-                  <div>
+                  <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrição / Detalhes</label>
+                    <textarea [(ngModel)]="currentProduct.description" rows="3" placeholder="Ex: Marca X, 500g, Tipo 1..." class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                  </div>
+
+                  <div class="col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select [(ngModel)]="currentProduct.status" class="w-full border-gray-300 rounded-lg p-2.5 bg-white">
                       <option value="Ativo">Ativo</option>
@@ -103,12 +103,13 @@ import { AuthService } from '../../../core/services/auth.service';
             <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
               @if (products.length > 0) {
                 <table class="w-full text-sm text-left">
-                  <thead class="bg-gray-50 text-gray-500"><tr><th class="p-4">Nome</th><th class="p-4">Preço</th><th class="p-4 text-right">Ações</th></tr></thead>
+                  <thead class="bg-gray-50 text-gray-500"><tr><th class="p-4">Nome</th><th class="p-4">Descrição</th><th class="p-4">Preço</th><th class="p-4 text-right">Ações</th></tr></thead>
                   <tbody>
                     @for (product of products; track product._id) {
                       <tr class="border-b hover:bg-gray-50">
-                        <td class="p-4 font-medium">{{ product.name }}</td>
-                        <td class="p-4 font-bold">R$ {{ product.price }}</td>
+                        <td class="p-4 font-bold">{{ product.name }}</td>
+                        <td class="p-4 text-gray-500 truncate max-w-xs">{{ product.description || '-' }}</td>
+                        <td class="p-4 font-bold text-gray-800">R$ {{ product.price }}</td>
                         <td class="p-4 text-right flex justify-end gap-2">
                           <button (click)="startEdit(product)" class="text-indigo-600"><lucide-icon [img]="PencilIcon" class="w-4 h-4"></lucide-icon></button>
                           <button (click)="deleteProduct(product._id)" class="text-red-600"><lucide-icon [img]="Trash2Icon" class="w-4 h-4"></lucide-icon></button>
@@ -137,32 +138,21 @@ import { AuthService } from '../../../core/services/auth.service';
                     <option value="Hortifruti">Hortifruti</option>
                   </select>
                 </div>
-
                 <div class="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                   <h4 class="font-bold text-indigo-900 flex items-center gap-2">
                     <lucide-icon [img]="MapPinIcon" class="w-4 h-4"></lucide-icon> Localização
                   </h4>
-                  <p class="text-sm text-indigo-700 mb-3">Defina onde sua loja aparece no mapa.</p>
-                  
-                  <div class="flex items-center gap-3">
-                    <app-button (click)="getLocation()" className="bg-indigo-600 text-white text-xs">
-                      📍 Obter Localização Atual
-                    </app-button>
-                    @if (storeSettings.lat) {
-                      <span class="text-xs text-green-600 font-bold">Localização definida! ({{storeSettings.lat}}, {{storeSettings.lng}})</span>
-                    } @else {
-                      <span class="text-xs text-red-500">Localização pendente</span>
-                    }
+                  <div class="flex items-center gap-3 mt-2">
+                    <app-button (click)="getLocation()" className="bg-indigo-600 text-white text-xs">📍 Obter Localização</app-button>
+                    @if (storeSettings.lat) { <span class="text-xs text-green-600 font-bold">Definida!</span> }
                   </div>
                 </div>
-
                 <div class="flex justify-end pt-4">
                   <app-button (click)="updateStoreSettings()" className="bg-green-600 text-white">Salvar Tudo</app-button>
                 </div>
               </div>
             </div>
           }
-
         </div>
       </main>
     </div>
@@ -174,7 +164,6 @@ export class SellerDashboardComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
 
-  // Ícones
   readonly LayoutDashboardIcon = LayoutDashboard;
   readonly StoreIcon = Store;
   readonly PackageIcon = Package;
@@ -194,7 +183,8 @@ export class SellerDashboardComponent implements OnInit {
   showForm = false;
   isEditing = false;
   editingId: string | null = null;
-  currentProduct = { name: '', price: '', status: 'Ativo' };
+  // Adicionei description aqui
+  currentProduct = { name: '', price: '', status: 'Ativo', description: '' };
 
   storeSettings = { storeName: '', storeType: '', lat: 0, lng: 0 };
 
@@ -204,49 +194,29 @@ export class SellerDashboardComponent implements OnInit {
     return this.products.reduce((acc, p) => acc + (parseFloat(p.price.replace(',', '.')) || 0), 0);
   }
 
-  // --- MÁSCARA DE MOEDA ---
   applyCurrencyMask(value: string) {
-    // 1. Remove tudo que não é número
     let onlyNumbers = value.replace(/\D/g, '');
-    
-    // 2. Converte para numero e divide por 100 (para considerar centavos)
     let numberValue = (parseInt(onlyNumbers) / 100).toFixed(2);
-    
-    // 3. Se deu NaN (campo vazio), zera
     if (isNaN(parseFloat(numberValue))) numberValue = "0.00";
-
-    // 4. Troca ponto por vírgula
     this.currentProduct.price = numberValue.replace('.', ',');
   }
 
-  // --- GEOLOCALIZAÇÃO ---
   getLocation() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
         this.storeSettings.lat = position.coords.latitude;
         this.storeSettings.lng = position.coords.longitude;
-        alert('Localização capturada com sucesso!');
-      }, () => {
-        alert('Não foi possível obter sua localização. Permita o acesso no navegador.');
-      });
-    } else {
-      alert('Seu navegador não suporta geolocalização.');
-    }
+        alert('Localização capturada!');
+      }, () => alert('Erro no GPS'));
+    } else alert('Sem GPS');
   }
 
   checkUserAndFetch() {
     const user = this.authService.currentUser() as any;
     if (!user) { this.router.navigate(['/auth']); return; }
-
     this.currentUserName = user.name;
     this.storeName = user.storeName;
-    
-    this.storeSettings = {
-      storeName: user.storeName,
-      storeType: user.storeType,
-      lat: user.lat, // Carrega lat do banco
-      lng: user.lng  // Carrega lng do banco
-    };
+    this.storeSettings = { storeName: user.storeName, storeType: user.storeType, lat: user.lat, lng: user.lng };
 
     const userId = user._id;
     this.http.get<any[]>(`http://localhost:3000/api/products?ownerId=${userId}`).subscribe(data => {
@@ -258,32 +228,15 @@ export class SellerDashboardComponent implements OnInit {
   updateStoreSettings() {
     const user = this.authService.currentUser();
     if (!user) return;
-
-    this.http.put('http://localhost:3000/api/user/update-profile', {
-      email: user.email,
-      ...this.storeSettings // Envia nome, tipo, lat e lng
-    }).subscribe({
-      next: (res: any) => {
-        alert('Configurações salvas!');
-        this.storeName = this.storeSettings.storeName;
-        this.authService.currentUser.set(res.user);
-      },
-      error: () => alert('Erro ao atualizar.')
-    });
+    this.http.put('http://localhost:3000/api/user/update-profile', { email: user.email, ...this.storeSettings })
+      .subscribe({
+        next: (res: any) => { alert('Salvo!'); this.storeName = this.storeSettings.storeName; this.authService.currentUser.set(res.user); },
+        error: () => alert('Erro')
+      });
   }
 
   saveProduct() {
-    // VALIDAÇÃO FRONTEND
-    if (!this.currentProduct.name) {
-      alert('O nome do produto é obrigatório.');
-      return;
-    }
-    const priceNum = parseFloat(this.currentProduct.price.replace(',', '.'));
-    if (priceNum < 0) {
-      alert('O preço não pode ser negativo.');
-      return;
-    }
-
+    if (!this.currentProduct.name) { alert('Nome obrigatório'); return; }
     const user = this.authService.currentUser() as any;
     const data = { ...this.currentProduct, ownerId: user._id };
 
@@ -294,10 +247,10 @@ export class SellerDashboardComponent implements OnInit {
     }
   }
 
-  // ... (startEdit, deleteProduct, resetForm, logout igual ao anterior) ...
   startEdit(p: any) { this.isEditing=true; this.editingId=p._id; this.currentProduct={...p}; this.showForm=true; this.currentView='products'; }
   deleteProduct(id: string) { if(confirm('Excluir?')) this.http.delete(`http://localhost:3000/api/products/${id}`).subscribe(()=>this.checkUserAndFetch()); }
-  resetForm() { this.showForm=false; this.currentProduct={name:'',price:'',status:'Ativo'}; this.checkUserAndFetch(); }
-  openCreateForm() { this.showForm=!this.showForm; this.currentProduct={name:'',price:'',status:'Ativo'}; this.isEditing=false; }
+  // Reseta description também
+  resetForm() { this.showForm=false; this.currentProduct={name:'',price:'',status:'Ativo', description: ''}; this.checkUserAndFetch(); }
+  openCreateForm() { this.showForm=!this.showForm; this.currentProduct={name:'',price:'',status:'Ativo', description: ''}; this.isEditing=false; }
   logout() { this.authService.logout(); }
 }

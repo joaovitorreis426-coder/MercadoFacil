@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "Mercado Fácil-angular": {
+    "MercadoFacil": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -57,10 +57,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "Mercado Fácil-angular:build:production"
+              "buildTarget": "MercadoFacil:build:production"
             },
             "development": {
-              "buildTarget": "Mercado Fácil-angular:build:development"
+              "buildTarget": "MercadoFacil:build:development"
             }
           },
           "defaultConfiguration": "development"
