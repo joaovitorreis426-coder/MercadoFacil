@@ -2,12 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { Sequelize, DataTypes, Op } = require('sequelize');
+const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
 
 const sequelize = new Sequelize({
     dialect: 'sqlite',
@@ -190,6 +194,16 @@ app.post('/api/compare', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Erro ao comparar' });
     }
+});
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, () => {
+    console.log(`🔥 Servidor rodando na porta ${PORT}`);
+
 });
 
 app.listen(PORT, () => console.log(`🔥 Servidor com Descrição rodando na porta ${PORT}`));
