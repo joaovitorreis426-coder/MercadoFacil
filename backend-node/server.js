@@ -198,7 +198,7 @@ app.post('/api/compare', async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`🔥 Servidor com Descrição rodando na porta ${PORT}`));
-const path = require('path');
+
 
 // 🔹 Servir Angular
 app.use(express.static(path.join(__dirname, 'public')));
