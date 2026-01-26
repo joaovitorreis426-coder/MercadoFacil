@@ -195,15 +195,15 @@ app.post('/api/compare', async (req, res) => {
         res.status(500).json({ error: 'Erro ao comparar' });
     }
 });
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.listen(PORT, () => {
-    console.log(`🔥 Servidor rodando na porta ${PORT}`);
-
-});
 
 app.listen(PORT, () => console.log(`🔥 Servidor com Descrição rodando na porta ${PORT}`));
+const path = require('path');
+
+// 🔹 Servir Angular
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 🔹 Qualquer rota que não seja /api vai para o Angular
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
