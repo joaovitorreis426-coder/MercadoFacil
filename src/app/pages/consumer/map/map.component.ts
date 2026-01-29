@@ -13,7 +13,7 @@ import * as L from 'leaflet';
   template: `
     <div class="h-screen flex flex-col">
       <header class="bg-white shadow-md z-10 p-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold text-gray-800">📍 Mercado Fácil Market - Lojas Próximas</h1>
+        <h1 class="text-xl font-bold text-gray-800">📍 Mercado Fácil - Lojas Próximas</h1>
         
         <div class="flex gap-4">
           <a routerLink="/consumer/list" class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">

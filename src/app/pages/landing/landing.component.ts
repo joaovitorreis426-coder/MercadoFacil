@@ -15,7 +15,7 @@ import { LucideAngularModule, ShoppingBag, Store, MapPin, TrendingDown, ArrowRig
           <div class="bg-indigo-600 text-white p-1.5 rounded-lg">
             <lucide-icon [img]="ShoppingBagIcon" class="w-6 h-6"></lucide-icon>
           </div>
-          Mercado Fácil Market
+          Mercado Fácil
         </div>
         <div class="hidden md:flex gap-6 text-gray-600 font-medium">
           <a href="#como-funciona" class="hover:text-indigo-600 transition">Como funciona</a>
@@ -126,7 +126,7 @@ import { LucideAngularModule, ShoppingBag, Store, MapPin, TrendingDown, ArrowRig
 
       <footer class="bg-gray-50 border-t border-gray-200 py-12">
         <div class="max-w-7xl mx-auto px-6 text-center">
-          <p class="text-gray-500">© 2026 Mercado Fácil Market. Projeto Acadêmico.</p>
+          <p class="text-gray-500">© 2026 Mercado Fácil. Projeto Acadêmico.</p>
         </div>
       </footer>
     </div>
