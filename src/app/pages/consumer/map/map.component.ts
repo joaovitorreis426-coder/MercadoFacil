@@ -72,7 +72,7 @@ export class MapComponent implements OnInit {
   }
 
   loadSellers() {
-    this.http.get<any[]>('http://localhost:3000/api/sellers')
+    this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/sellers')
       .subscribe(sellers => {
         console.log('Lojas encontradas:', sellers); // Debug para ver se veio algo
         sellers.forEach(seller => {

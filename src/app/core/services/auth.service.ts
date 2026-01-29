@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private apiUrl = 'http://localhost:3000/api'; 
+  private apiUrl = 'https://mercadofacil-hrvh.onrender.com/api'; 
 
   currentUser = signal<{ name: string; email: string; type: string } | null>(null);
 

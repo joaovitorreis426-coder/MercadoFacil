@@ -68,7 +68,7 @@ export class StoreSetupComponent {
 
     const email = this.authService.currentUser()?.email;
 
-    this.http.put('http://localhost:3000/api/user/setup-store', {
+    this.http.put('https://mercadofacil-hrvh.onrender.com/api/user/setup-store', {
       email: email,
       storeName: this.storeName,
       storeType: this.storeType

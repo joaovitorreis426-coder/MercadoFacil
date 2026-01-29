@@ -97,7 +97,7 @@ export class ConsumerListComponent {
   onType(event: any) {
     const value = event.target.value;
     if (value.includes(',')) return;
-    if (value.length > 2) this.http.get<string[]>(`http://localhost:3000/api/products/search?q=${value}`).subscribe(data => this.suggestions = data);
+    if (value.length > 2) this.http.get<string[]>(`https://mercadofacil-hrvh.onrender.com/api/products/search?q=${value}`).subscribe(data => this.suggestions = data);
   }
 
   addItem() {
@@ -113,7 +113,7 @@ export class ConsumerListComponent {
 
   comparePrices() {
     if (this.shoppingList.length === 0) return;
-    this.http.post<any[]>('http://localhost:3000/api/compare', { shoppingList: this.shoppingList }).subscribe({
+    this.http.post<any[]>('https://mercadofacil-hrvh.onrender.com/api/compare', { shoppingList: this.shoppingList }).subscribe({
       next: (data) => { this.ranking = data; if (data.length === 0) alert('Nenhum produto encontrado.'); },
       error: () => alert('Erro ao comparar.')
     });
