@@ -237,4 +237,4 @@ app.post('/api/compare', async (req, res) => {
         res.status(500).json({ error: 'Erro ao comparar' });
     }
 });
-app.listen(PORT, () => console.log(`🔥 Servidor Definitivo rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`🔥 Servidor rodando na porta ${PORT}`));
