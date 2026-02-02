@@ -274,7 +274,7 @@ export class SellerDashboardComponent implements OnInit {
     this.storeName = user.storeName;
     this.storeSettings = { storeName: user.storeName, storeType: user.storeType || 'Mercado', lat: user.lat || 0, lng: user.lng || 0 };
 
-    this.http.get<any[]>(`http://localhost:3000/api/products?ownerId=${user._id}`).subscribe(data => {
+    this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/products?ownerId=${user._id}`).subscribe(data => {
       this.products = data;
       this.cdr.detectChanges();
     });
@@ -284,7 +284,7 @@ export class SellerDashboardComponent implements OnInit {
     if (!this.storeSettings.storeName || !this.storeSettings.lat) { alert('Preencha Nome e Localização'); return; }
     const user = this.authService.currentUser();
     if (!user) return;
-    this.http.put('http://localhost:3000/api/user/update-profile', { email: user.email, ...this.storeSettings })
+    this.http.put('https://mercadofacil-hrvh.onrender.com/api/user/update-profile', { email: user.email, ...this.storeSettings })
       .subscribe({
         next: (res: any) => { 
           alert('Salvo!'); 
@@ -303,14 +303,14 @@ export class SellerDashboardComponent implements OnInit {
     const data = { ...this.currentProduct, ownerId: user._id };
 
     if (this.isEditing && this.editingId) {
-      this.http.put(`http://localhost:3000/api/products/${this.editingId}`, data).subscribe(() => this.resetForm());
+      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${this.editingId}`, data).subscribe(() => this.resetForm());
     } else {
-      this.http.post('http://localhost:3000/api/products', data).subscribe(() => this.resetForm());
+      this.http.post('https://mercadofacil-hrvh.onrender.com/api/products', data).subscribe(() => this.resetForm());
     }
   }
 
   startEdit(p: any) { this.isEditing=true; this.editingId=p._id; this.currentProduct={...p}; this.showForm=true; }
-  deleteProduct(id: string) { if(confirm('Excluir?')) this.http.delete(`http://localhost:3000/api/products/${id}`).subscribe(()=>this.checkUserAndFetch()); }
+  deleteProduct(id: string) { if(confirm('Excluir?')) this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe(()=>this.checkUserAndFetch()); }
   resetForm() { this.showForm=false; this.currentProduct={name:'',price:'',status:'Ativo', description: '', category: ''}; this.checkUserAndFetch(); }
   openCreateForm() { this.showForm=!this.showForm; this.currentProduct={name:'',price:'',status:'Ativo', description: '', category: ''}; this.isEditing=false; }
   logout() { this.authService.logout(); }

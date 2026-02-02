@@ -223,7 +223,7 @@ export class ConsumerListComponent implements OnInit {
 
   // 2. Busca Vendedores e Calcula Distância
   fetchSellers() {
-    this.http.get<any[]>('http://localhost:3000/api/sellers').subscribe({
+    this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/sellers').subscribe({
       next: (sellers) => {
         // Se temos a localização do usuário, calculamos a distância
         if (this.myLat && this.myLng) {
@@ -274,7 +274,7 @@ export class ConsumerListComponent implements OnInit {
     const value = event.target.value;
     if (value.includes(',')) return;
     if (value.length > 2) {
-      this.http.get<string[]>(`http://localhost:3000/api/products/search?q=${value}`)
+      this.http.get<string[]>(`https://mercadofacil-hrvh.onrender.com/api/products/search?q=${value}`)
         .subscribe(data => this.suggestions = data);
     }
   }
@@ -297,7 +297,7 @@ export class ConsumerListComponent implements OnInit {
 
   comparePrices() {
     if (this.shoppingList.length === 0) return;
-    this.http.post<any[]>('http://localhost:3000/api/compare', { shoppingList: this.shoppingList })
+    this.http.post<any[]>('https://mercadofacil-hrvh.onrender.com/api/compare', { shoppingList: this.shoppingList })
       .subscribe({
         next: (data) => {
           this.ranking = data;
