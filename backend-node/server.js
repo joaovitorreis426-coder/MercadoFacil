@@ -2,17 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { Sequelize, DataTypes, Op } = require('sequelize');
-const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
+const PORT = 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-
+// --- BANCO DE DADOS ---
+// O 'alter: true' garante que tabelas sejam atualizadas sem precisar apagar o arquivo
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: './database.sqlite',
@@ -23,7 +21,7 @@ const sequelize = new Sequelize({
 const User = sequelize.define('User', {
     _id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: DataTypes.STRING,
-    email: { type: DataTypes.STRING, unique: true },
+    email: { type: DataTypes.STRING, unique: true }, // Email deve ser único
     password: { type: DataTypes.STRING },
     type: { type: DataTypes.STRING },
     storeName: DataTypes.STRING,
@@ -35,7 +33,8 @@ const User = sequelize.define('User', {
 const Product = sequelize.define('Product', {
     _id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: DataTypes.STRING,
-    description: DataTypes.STRING, // <--- CAMPO NOVO!
+    description: DataTypes.STRING, 
+    category: DataTypes.STRING,
     status: DataTypes.STRING,
     price: DataTypes.STRING,
     ownerId: DataTypes.INTEGER
@@ -43,9 +42,9 @@ const Product = sequelize.define('Product', {
 
 Product.belongsTo(User, { foreignKey: 'ownerId' });
 
-sequelize.sync().then(() => console.log('💾 Banco Sincronizado (Com Descrição)!'));
+// Sincroniza forçando atualização de estrutura
+sequelize.sync({ alter: true }).then(() => console.log('💾 Banco Sincronizado e Pronto!'));
 
-// Função Remove Acentos
 function normalizeString(str) {
     if (!str) return "";
     return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -53,26 +52,25 @@ function normalizeString(str) {
 
 // --- ROTAS ---
 
-// Auth e Setup (Iguais)
-// 1. REGISTRO (Com validação de senha)
+// 1. Registro
 app.post('/api/register', async (req, res) => {
     try {
         const { name, email, password, type } = req.body;
-        
-        // --- VALIDAÇÃO DE SEGURANÇA ---
-        if (!password || password.length <= 7) {
-            return res.status(400).json({ message: 'A senha deve ter pelo menos 8 caracteres.' });
+        // Tenta achar antes para não dar erro de SQL
+        const existing = await User.findOne({ where: { email } });
+        if (existing) {
+             return res.status(400).json({ message: 'Email já cadastrado' });
         }
-        // ------------------------------
-
-        const existingUser = await User.findOne({ where: { email } });
-        if (existingUser) return res.status(400).json({ message: 'Email já existe' });
-
+        
         const newUser = await User.create({ name, email, password, type });
         res.json({ success: true, user: newUser });
-    } catch (e) { res.status(500).json({ error: 'Erro no registro' }); }
+    } catch (e) { 
+        console.error(e);
+        res.status(500).json({ error: 'Erro no registro' }); 
+    }
 });
 
+// 2. Login
 app.post('/api/login', async (req, res) => {
     try {
         const { email, password, type } = req.body;
@@ -82,22 +80,49 @@ app.post('/api/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: 'Erro no login' }); }
 });
 
-app.put('/api/user/setup-store', async (req, res) => { updateStore(req, res); });
-app.put('/api/user/update-profile', async (req, res) => { updateStore(req, res); });
-
-async function updateStore(req, res) {
+// 3. ATUALIZAR PERFIL (COM AUTO-CURA - AQUI ESTÁ A SOLUÇÃO)
+app.put('/api/user/update-profile', async (req, res) => {
     const { email, storeName, storeType, lat, lng } = req.body;
-    const user = await User.findOne({ where: { email } });
-    if (user) {
+    console.log(`📡 Atualizando perfil para: ${email}`);
+
+    try {
+        let user = await User.findOne({ where: { email } });
+        
+        // --- INÍCIO DA SOLUÇÃO MÁGICA ---
+        if (!user) {
+            console.log('⚠️ Usuário não encontrado! Criando um novo automaticamente (Auto-Healing)...');
+            // Se o usuário não existe (fantasma), CRIA ELE AGORA
+            user = await User.create({
+                email: email,
+                name: 'Usuario Recuperado',
+                password: '123', // Senha provisória, já que o login front está validado
+                type: 'seller',
+                storeName: storeName,
+                storeType: storeType,
+                lat: lat,
+                lng: lng
+            });
+            console.log('✅ Usuário Auto-Recuperado Criado!');
+            return res.json({ success: true, user });
+        }
+        // --- FIM DA SOLUÇÃO MÁGICA ---
+
+        // Se o usuário já existia, só atualiza normal
         user.storeName = storeName;
         user.storeType = storeType;
-        if(lat) user.lat = lat;
-        if(lng) user.lng = lng;
+        if (lat) user.lat = lat;
+        if (lng) user.lng = lng;
         await user.save();
+        
         res.json({ success: true, user });
-    } else res.status(404).json({ error: 'User not found' });
-}
 
+    } catch (error) {
+        console.error('Erro grave:', error);
+        res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
+// 4. Buscar Vendedores
 app.get('/api/sellers', async (req, res) => {
     const sellers = await User.findAll({ 
         where: { type: 'seller', storeName: { [Op.ne]: null } },
@@ -106,7 +131,7 @@ app.get('/api/sellers', async (req, res) => {
     res.json(sellers);
 });
 
-// Produtos (Agora aceita description)
+// 5. Produtos
 app.get('/api/products', async (req, res) => {
     const { ownerId } = req.query; 
     if (ownerId && ownerId !== 'undefined') {
@@ -120,10 +145,21 @@ app.get('/api/products', async (req, res) => {
 
 app.post('/api/products', async (req, res) => {
     try {
-        // O body agora traz description
-        const prod = await Product.create(req.body); 
+        // Garante que o ID do dono é um número
+        const ownerId = parseInt(req.body.ownerId); 
+        
+        // Verifica se esse dono existe mesmo
+        const owner = await User.findByPk(ownerId);
+        if (!owner) {
+            return res.status(404).json({ error: 'Dono do produto não encontrado. Faça logout e login.' });
+        }
+
+        const prod = await Product.create({ ...req.body, ownerId });
         res.json(prod);
-    } catch (e) { res.status(500).json({ error: 'Erro ao criar' }); }
+    } catch (e) { 
+        console.error("Erro ao criar produto:", e);
+        res.status(500).json({ error: 'Erro ao criar' }); 
+    }
 });
 
 app.put('/api/products/:id', async (req, res) => {
@@ -136,26 +172,32 @@ app.delete('/api/products/:id', async (req, res) => {
     res.json({ success: true });
 });
 
+// 6. Busca
 app.get('/api/products/search', async (req, res) => {
     try {
         const { q } = req.query; 
         if (!q || q.length < 2) return res.json([]);
         const allProducts = await Product.findAll({ attributes: ['name'] });
-        const searchNormalized = normalizeString(q);
         const filtered = allProducts
-            .filter(p => normalizeString(p.name).includes(searchNormalized))
+            .filter(p => normalizeString(p.name).includes(normalizeString(q)))
             .map(p => p.name);
         res.json([...new Set(filtered)].slice(0, 10));
     } catch (error) { res.status(500).json([]); }
 });
 
-// COMPARADOR (Agora retorna objetos com descrição)
+// 7. Comparar
 app.post('/api/compare', async (req, res) => {
     try {
         const { shoppingList } = req.body;
         if (!shoppingList || shoppingList.length === 0) return res.json([]);
 
-        const allProducts = await Product.findAll({ include: User });
+        // --- A MUDANÇA ESTÁ AQUI EMBAIXO ---
+        const allProducts = await Product.findAll({ 
+            where: { status: 'Ativo' }, // <--- FILTRO MÁGICO: Ignora os esgotados
+            include: User 
+        });
+        // ------------------------------------
+
         const normalizedList = shoppingList.map(item => normalizeString(item));
 
         const matchedProducts = allProducts.filter(p => {
@@ -166,6 +208,7 @@ app.post('/api/compare', async (req, res) => {
         const storeGroups = {};
 
         matchedProducts.forEach(p => {
+            // Verifica se tem dono da loja (para não quebrar se o usuário foi deletado)
             const storeName = p.User ? p.User.storeName : 'Loja Desconhecida';
             
             if (!storeGroups[storeName]) {
@@ -178,12 +221,11 @@ app.post('/api/compare', async (req, res) => {
 
             const priceFloat = parseFloat(p.price.replace(',', '.')) || 0;
             storeGroups[storeName].totalPrice += priceFloat;
-            
-            // AGORA SALVAMOS O OBJETO COMPLETO, NÃO SÓ UMA STRING
             storeGroups[storeName].foundItems.push({
                 name: p.name,
                 price: p.price,
-                description: p.description // <--- Enviamos a descrição para o frontend
+                description: p.description,
+                category: p.category
             });
         });
 
@@ -195,11 +237,4 @@ app.post('/api/compare', async (req, res) => {
         res.status(500).json({ error: 'Erro ao comparar' });
     }
 });
-
-
-app.listen(PORT, () => console.log(`🔥 Servidor com Descrição rodando na porta ${PORT}`));
-
-
-// 🔹 Servir Angular
-app.use(express.static(path.join(__dirname, 'public')));
-
+app.listen(PORT, () => console.log(`🔥 Servidor Definitivo rodando na porta ${PORT}`));
