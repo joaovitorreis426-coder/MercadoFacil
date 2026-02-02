@@ -43,7 +43,7 @@ const Product = sequelize.define('Product', {
 Product.belongsTo(User, { foreignKey: 'ownerId' });
 
 // ATENÇÃO: 'force: true' apaga os dados antigos para recriar as tabelas sem erros
-sequelize.sync({ force: true }).then(() => console.log('💾 Banco RESETADO e Pronto!'));
+sequelize.sync({ alter: true }).then(() => console.log('💾 Banco RESETADO e Pronto!'));
 
 function normalizeString(str) {
     if (!str) return "";
