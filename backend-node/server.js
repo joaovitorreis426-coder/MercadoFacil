@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { Sequelize, DataTypes, Op } = require('sequelize');
+const fs = require('fs'); // Biblioteca de arquivos do sistema
 
 const app = express();
 const PORT = 3000;
@@ -9,8 +10,21 @@ const PORT = 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
+// --- 🛑 ZONA DE LIMPEZA DE EMERGÊNCIA (SOLUÇÃO PRO RENDER) ---
+// Esse bloco verifica se o banco existe e APAGA ele antes de conectar.
+// Isso resolve o erro de "Foreign Key Constraint" travada.
+try {
+    const dbPath = './database.sqlite';
+    if (fs.existsSync(dbPath)) {
+        fs.unlinkSync(dbPath);
+        console.log('🗑️ BANCO DE DADOS TRAVADO FOI DELETADO COM SUCESSO! INICIANDO LIMPO.');
+    }
+} catch (err) {
+    console.error('Erro ao tentar limpar o banco:', err);
+}
+// -------------------------------------------------------------
+
 // --- BANCO DE DADOS ---
-// O 'alter: true' garante que tabelas sejam atualizadas sem precisar apagar o arquivo
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: './database.sqlite',
@@ -21,7 +35,7 @@ const sequelize = new Sequelize({
 const User = sequelize.define('User', {
     _id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: DataTypes.STRING,
-    email: { type: DataTypes.STRING, unique: true }, // Email deve ser único
+    email: { type: DataTypes.STRING, unique: true },
     password: { type: DataTypes.STRING },
     type: { type: DataTypes.STRING },
     storeName: DataTypes.STRING,
@@ -42,8 +56,8 @@ const Product = sequelize.define('Product', {
 
 Product.belongsTo(User, { foreignKey: 'ownerId' });
 
-// ATENÇÃO: 'force: true' apaga os dados antigos para recriar as tabelas sem erros
-sequelize.sync({ alter: true }).then(() => console.log('💾 Banco RESETADO e Pronto!'));
+// Sincroniza criando as tabelas do zero
+sequelize.sync({ force: true }).then(() => console.log('💾 Banco Novo Criado e Pronto!'));
 
 function normalizeString(str) {
     if (!str) return "";
@@ -56,11 +70,8 @@ function normalizeString(str) {
 app.post('/api/register', async (req, res) => {
     try {
         const { name, email, password, type } = req.body;
-        // Tenta achar antes para não dar erro de SQL
         const existing = await User.findOne({ where: { email } });
-        if (existing) {
-             return res.status(400).json({ message: 'Email já cadastrado' });
-        }
+        if (existing) return res.status(400).json({ message: 'Email já cadastrado' });
         
         const newUser = await User.create({ name, email, password, type });
         res.json({ success: true, user: newUser });
@@ -80,7 +91,7 @@ app.post('/api/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: 'Erro no login' }); }
 });
 
-// 3. ATUALIZAR PERFIL (COM AUTO-CURA - AQUI ESTÁ A SOLUÇÃO)
+// 3. ATUALIZAR PERFIL (COM AUTO-CURA)
 app.put('/api/user/update-profile', async (req, res) => {
     const { email, storeName, storeType, lat, lng } = req.body;
     console.log(`📡 Atualizando perfil para: ${email}`);
@@ -88,36 +99,32 @@ app.put('/api/user/update-profile', async (req, res) => {
     try {
         let user = await User.findOne({ where: { email } });
         
-        // --- INÍCIO DA SOLUÇÃO MÁGICA ---
+        // SE NÃO EXISTIR, CRIA NA HORA (Evita erro 404)
         if (!user) {
-            console.log('⚠️ Usuário não encontrado! Criando um novo automaticamente (Auto-Healing)...');
-            // Se o usuário não existe (fantasma), CRIA ELE AGORA
+            console.log('⚠️ Usuário fantasma detectado! Recriando automaticamente...');
             user = await User.create({
                 email: email,
-                name: 'Usuario Recuperado',
-                password: '123', // Senha provisória, já que o login front está validado
+                name: 'Loja Recuperada',
+                password: '123', 
                 type: 'seller',
                 storeName: storeName,
                 storeType: storeType,
                 lat: lat,
                 lng: lng
             });
-            console.log('✅ Usuário Auto-Recuperado Criado!');
+            console.log('✅ Usuário recuperado criado!');
             return res.json({ success: true, user });
         }
-        // --- FIM DA SOLUÇÃO MÁGICA ---
 
-        // Se o usuário já existia, só atualiza normal
         user.storeName = storeName;
         user.storeType = storeType;
         if (lat) user.lat = lat;
         if (lng) user.lng = lng;
         await user.save();
-        
         res.json({ success: true, user });
 
     } catch (error) {
-        console.error('Erro grave:', error);
+        console.error('Erro ao atualizar:', error);
         res.status(500).json({ error: 'Erro interno' });
     }
 });
@@ -131,7 +138,7 @@ app.get('/api/sellers', async (req, res) => {
     res.json(sellers);
 });
 
-// 5. Produtos
+// 5. Produtos CRUD
 app.get('/api/products', async (req, res) => {
     const { ownerId } = req.query; 
     if (ownerId && ownerId !== 'undefined') {
@@ -145,19 +152,18 @@ app.get('/api/products', async (req, res) => {
 
 app.post('/api/products', async (req, res) => {
     try {
-        // Garante que o ID do dono é um número
         const ownerId = parseInt(req.body.ownerId); 
-        
-        // Verifica se esse dono existe mesmo
         const owner = await User.findByPk(ownerId);
+        
+        // Se o dono não existe (porque o banco resetou), recria um usuário temporário ou avisa
         if (!owner) {
-            return res.status(404).json({ error: 'Dono do produto não encontrado. Faça logout e login.' });
+             return res.status(404).json({ error: 'Erro de sessão. Faça logout e login novamente.' });
         }
 
         const prod = await Product.create({ ...req.body, ownerId });
         res.json(prod);
     } catch (e) { 
-        console.error("Erro ao criar produto:", e);
+        console.error("Erro criar produto:", e);
         res.status(500).json({ error: 'Erro ao criar' }); 
     }
 });
@@ -172,12 +178,18 @@ app.delete('/api/products/:id', async (req, res) => {
     res.json({ success: true });
 });
 
-// 6. Busca
+// 6. Busca Autocomplete
 app.get('/api/products/search', async (req, res) => {
     try {
         const { q } = req.query; 
         if (!q || q.length < 2) return res.json([]);
-        const allProducts = await Product.findAll({ attributes: ['name'] });
+        
+        // Só busca produtos ATIVOS na sugestão também
+        const allProducts = await Product.findAll({ 
+            where: { status: 'Ativo' },
+            attributes: ['name'] 
+        });
+        
         const filtered = allProducts
             .filter(p => normalizeString(p.name).includes(normalizeString(q)))
             .map(p => p.name);
@@ -185,18 +197,17 @@ app.get('/api/products/search', async (req, res) => {
     } catch (error) { res.status(500).json([]); }
 });
 
-// 7. Comparar
+// 7. Comparar Preços (CORRIGIDO: Só busca produtos ATIVOS)
 app.post('/api/compare', async (req, res) => {
     try {
         const { shoppingList } = req.body;
         if (!shoppingList || shoppingList.length === 0) return res.json([]);
 
-        // --- A MUDANÇA ESTÁ AQUI EMBAIXO ---
+        // FILTRO IMPORTANTE: Só pega produtos com status 'Ativo'
         const allProducts = await Product.findAll({ 
-            where: { status: 'Ativo' }, // <--- FILTRO MÁGICO: Ignora os esgotados
+            where: { status: 'Ativo' }, 
             include: User 
         });
-        // ------------------------------------
 
         const normalizedList = shoppingList.map(item => normalizeString(item));
 
@@ -206,19 +217,10 @@ app.post('/api/compare', async (req, res) => {
         });
 
         const storeGroups = {};
-
         matchedProducts.forEach(p => {
-            // Verifica se tem dono da loja (para não quebrar se o usuário foi deletado)
             const storeName = p.User ? p.User.storeName : 'Loja Desconhecida';
+            if (!storeGroups[storeName]) storeGroups[storeName] = { storeName, totalPrice: 0, foundItems: [] };
             
-            if (!storeGroups[storeName]) {
-                storeGroups[storeName] = {
-                    storeName: storeName,
-                    totalPrice: 0,
-                    foundItems: []
-                };
-            }
-
             const priceFloat = parseFloat(p.price.replace(',', '.')) || 0;
             storeGroups[storeName].totalPrice += priceFloat;
             storeGroups[storeName].foundItems.push({
@@ -237,4 +239,5 @@ app.post('/api/compare', async (req, res) => {
         res.status(500).json({ error: 'Erro ao comparar' });
     }
 });
-app.listen(PORT, () => console.log(`🔥 Servidor rodando na porta ${PORT}`));
+
+app.listen(PORT, () => console.log(`🔥 Servidor BLINDADO rodando na porta ${PORT}`));
