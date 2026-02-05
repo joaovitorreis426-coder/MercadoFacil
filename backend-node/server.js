@@ -180,6 +180,29 @@ app.delete('/api/lists/:id', async (req, res) => {
     res.json({ success: true });
 });
 
+// 4. ATUALIZAR (EDITAR) LISTA EXISTENTE
+app.put('/api/lists/:id', async (req, res) => {
+    try {
+        const { name, category, frequency, items } = req.body;
+        
+        // Atualiza os dados no banco
+        await ShoppingList.update(
+            { 
+                name, 
+                category, 
+                frequency, 
+                items: JSON.stringify(items) // Converte array ["Arroz"] para texto '["Arroz"]'
+            },
+            { where: { _id: req.params.id } }
+        );
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Erro ao atualizar lista' });
+    }
+});
+
 // --- ROTA DE COMPARAÇÃO (MELHORADA) ---
 app.post('/api/compare', async (req, res) => {
     try {

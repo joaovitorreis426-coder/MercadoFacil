@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { LucideAngularModule, MapPin, ShoppingCart, Search, Trash2, TrendingDown, Plus, Lightbulb, Save, Calendar, Tag, List } from 'lucide-angular';
+import { LucideAngularModule, MapPin, ShoppingCart, Search, Trash2, TrendingDown, Plus, Lightbulb, Save, Calendar, Tag, List, Pencil, XCircle } from 'lucide-angular';
 import { ButtonComponent } from '../../../shared/ui/button/button.component';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -23,10 +23,10 @@ import { AuthService } from '../../../core/services/auth.service';
             Mercado Fácil
           </h1>
           <div class="flex gap-2">
-            <button (click)="viewMode = 'create'" [class.bg-blue-100]="viewMode === 'create'" class="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors">
+            <button (click)="resetForm()" [class.bg-blue-100]="viewMode === 'create'" class="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors" title="Nova Lista">
               <lucide-icon [img]="PlusIcon" class="w-5 h-5"></lucide-icon>
             </button>
-            <button (click)="viewMode = 'saved'" [class.bg-blue-100]="viewMode === 'saved'" class="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors relative">
+            <button (click)="viewMode = 'saved'" [class.bg-blue-100]="viewMode === 'saved'" class="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors relative" title="Minhas Listas">
               <lucide-icon [img]="ListIcon" class="w-5 h-5"></lucide-icon>
               @if(savedLists.length > 0) { <span class="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full"></span> }
             </button>
@@ -39,32 +39,41 @@ import { AuthService } from '../../../core/services/auth.service';
         @if (viewMode === 'saved') {
           <section class="animate-in fade-in">
             <h2 class="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
-              <lucide-icon [img]="ListIcon" class="text-blue-500"></lucide-icon> Minhas Listas Salvas
+              <lucide-icon [img]="ListIcon" class="text-blue-500"></lucide-icon> Minhas Listas
             </h2>
 
             @if (savedLists.length === 0) {
               <div class="text-center p-8 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
                 Você ainda não salvou nenhuma lista.
-                <button (click)="viewMode = 'create'" class="text-blue-600 font-bold underline ml-1">Criar agora</button>
+                <button (click)="resetForm()" class="text-blue-600 font-bold underline ml-1">Criar agora</button>
               </div>
             }
 
             <div class="grid gap-4 sm:grid-cols-2">
               @for (list of savedLists; track list._id) {
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:border-blue-300 transition-all group relative">
-                  <button (click)="deleteList(list._id)" class="absolute top-3 right-3 text-gray-300 hover:text-red-500">
-                    <lucide-icon [img]="TrashIcon" class="w-4 h-4"></lucide-icon>
-                  </button>
+                  
+                  <div class="absolute top-3 right-3 flex gap-2">
+                    <button (click)="startEditing(list)" class="text-gray-400 hover:text-blue-600" title="Editar Lista">
+                      <lucide-icon [img]="PencilIcon" class="w-4 h-4"></lucide-icon>
+                    </button>
+                    <button (click)="deleteList(list._id)" class="text-gray-400 hover:text-red-500" title="Excluir Lista">
+                      <lucide-icon [img]="TrashIcon" class="w-4 h-4"></lucide-icon>
+                    </button>
+                  </div>
 
                   <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded bg-blue-50 text-blue-600">{{ list.category }}</span>
-                    <span class="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded" [class.bg-purple-50]="list.frequency === 'Mensal'" [class.text-purple-600]="list.frequency === 'Mensal'" [class.bg-green-50]="list.frequency === 'Semanal'" [class.text-green-600]="list.frequency === 'Semanal'">{{ list.frequency }}</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100">{{ list.category }}</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border bg-gray-50 text-gray-600">{{ list.frequency }}</span>
                   </div>
                   
-                  <h3 class="font-bold text-lg text-slate-800">{{ list.name }}</h3>
-                  <p class="text-sm text-slate-500 mb-4">{{ list.items.length }} itens cadastrados</p>
+                  <h3 class="font-bold text-lg text-slate-800 mb-1">{{ list.name }}</h3>
+                  
+                  <p class="text-sm text-slate-500 mb-4 line-clamp-2 h-10">
+                    {{ list.items.join(', ') }}
+                  </p>
 
-                  <app-button (click)="loadListToCompare(list)" className="w-full justify-center bg-blue-600 text-white text-sm">
+                  <app-button (click)="loadListToCompare(list)" className="w-full justify-center bg-blue-600 hover:bg-blue-700 text-white text-sm shadow-md shadow-blue-100">
                     Usar no Comparador
                   </app-button>
                 </div>
@@ -74,22 +83,40 @@ import { AuthService } from '../../../core/services/auth.service';
         }
 
         @if (viewMode === 'create') {
-          <section class="bg-white p-6 rounded-xl shadow-sm border border-blue-100">
-            <div class="flex justify-between items-center mb-4">
+          <section class="bg-white p-6 rounded-xl shadow-sm border border-blue-100 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1" [class.bg-gradient-to-r]="true" [class.from-blue-400]="!editingId" [class.to-green-400]="!editingId" [class.from-orange-400]="editingId" [class.to-red-400]="editingId"></div>
+
+            <div class="flex justify-between items-center mb-6">
               <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
-                <lucide-icon [img]="SearchIcon" class="text-blue-500"></lucide-icon> Montar Lista
+                @if (editingId) {
+                  <lucide-icon [img]="PencilIcon" class="text-orange-500"></lucide-icon> Editando Lista
+                } @else {
+                  <lucide-icon [img]="SearchIcon" class="text-blue-500"></lucide-icon> Nova Lista
+                }
               </h2>
-              @if (shoppingList.length > 0) {
-                <button (click)="saveListToDb()" class="text-sm bg-green-100 text-green-700 px-3 py-1.5 rounded-lg font-bold hover:bg-green-200 flex items-center gap-1 transition-colors">
-                  <lucide-icon [img]="SaveIcon" class="w-4 h-4"></lucide-icon> Salvar Lista
-                </button>
-              }
+
+              <div class="flex gap-2">
+                @if (editingId) {
+                  <button (click)="resetForm()" class="text-sm bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg font-bold hover:bg-gray-200 flex items-center gap-1">
+                    <lucide-icon [img]="XIcon" class="w-4 h-4"></lucide-icon> Cancelar
+                  </button>
+                }
+                
+                @if (shoppingList.length > 0) {
+                  <button (click)="saveListToDb()" class="text-sm px-3 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm"
+                    [class.bg-green-100]="!editingId" [class.text-green-700]="!editingId"
+                    [class.bg-orange-100]="editingId" [class.text-orange-800]="editingId">
+                    <lucide-icon [img]="SaveIcon" class="w-4 h-4"></lucide-icon> 
+                    {{ editingId ? 'Salvar Alterações' : 'Salvar Nova Lista' }}
+                  </button>
+                }
+              </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
               <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Nome da Lista</label>
-                <input [(ngModel)]="currentListName" placeholder="Ex: Churrasco Fim de Ano" class="w-full text-sm p-2 rounded border border-gray-300 outline-none focus:border-blue-500">
+                <label class="block text-xs font-bold text-slate-500 mb-1">Nome</label>
+                <input [(ngModel)]="currentListName" placeholder="Ex: Churrasco" class="w-full text-sm p-2 rounded border border-gray-300 outline-none focus:border-blue-500">
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-500 mb-1">Categoria</label>
@@ -109,11 +136,11 @@ import { AuthService } from '../../../core/services/auth.service';
             
             <div class="flex gap-2 mb-4">
               <input type="text" [(ngModel)]="newItem" (input)="onType($event)" (keyup.enter)="addItem()" list="product-suggestions" placeholder="Digite o produto..."
-                class="flex-1 border-2 border-blue-200 bg-slate-50 rounded-lg px-4 py-3 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all font-medium">
+                class="flex-1 border-2 border-blue-200 bg-white rounded-lg px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium">
               <datalist id="product-suggestions">
                 @for (suggestion of suggestions; track suggestion) { <option [value]="suggestion"></option> }
               </datalist>
-              <app-button (click)="addItem()" className="bg-blue-600 text-white shadow-lg shadow-blue-200"><lucide-icon [img]="PlusIcon" class="w-5 h-5"></lucide-icon></app-button>
+              <app-button (click)="addItem()" className="bg-blue-600 text-white shadow-lg"><lucide-icon [img]="PlusIcon" class="w-5 h-5"></lucide-icon></app-button>
             </div>
 
             @if (shoppingList.length > 0) {
@@ -131,10 +158,10 @@ import { AuthService } from '../../../core/services/auth.service';
           </section>
 
           @if (ranking.length > 0) {
-            <div class="space-y-4 animate-in slide-in-from-bottom-4">
+            <div class="space-y-4 animate-in slide-in-from-bottom-4 mt-8">
               <h3 class="font-bold text-slate-700 flex items-center gap-2 text-lg"><lucide-icon [img]="TrendingIcon" class="text-green-600"></lucide-icon> Resultado</h3>
               @for (result of ranking; track $index) {
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-l-4 transition-transform hover:scale-[1.01]" [class.border-l-green-500]="$index === 0" [class.border-l-gray-300]="$index > 0">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-l-4" [class.border-l-green-500]="$index === 0" [class.border-l-gray-300]="$index > 0">
                   <div class="flex justify-between items-start">
                     <div class="flex-1">
                       <h4 class="font-bold text-xl text-slate-800 flex items-center gap-2">
@@ -144,15 +171,13 @@ import { AuthService } from '../../../core/services/auth.service';
                       <p class="text-sm text-slate-500 mb-3">{{ result.foundItems.length }} produtos encontrados</p>
                       <div class="space-y-2 mt-4">
                         @for (found of result.foundItems; track $index) {
-                          <div class="text-sm border-b border-gray-100 last:border-0 pb-2">
-                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">✓ {{ found.name }}</span><span class="font-bold text-slate-900">R$ {{ found.price }}</span></div>
-                          </div>
+                          <div class="text-sm border-b border-gray-100 last:border-0 pb-2 flex justify-between"><span class="font-medium text-slate-600">✓ {{ found.name }}</span><span class="font-bold text-slate-900">R$ {{ found.price }}</span></div>
                         }
                       </div>
                     </div>
                     <div class="text-right pl-6 border-l border-gray-100 ml-4">
                       <span class="block text-xs text-gray-400 uppercase tracking-wide">Total</span>
-                      <span class="text-3xl font-extrabold" [class.text-green-600]="$index === 0" [class.text-slate-700]="$index > 0">R$ {{ result.totalPrice.toFixed(2).replace('.', ',') }}</span>
+                      <span class="text-3xl font-extrabold text-slate-700">R$ {{ result.totalPrice.toFixed(2).replace('.', ',') }}</span>
                     </div>
                   </div>
                 </div>
@@ -168,48 +193,67 @@ export class ConsumerListComponent implements OnInit {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
 
-  // Ícones
-  readonly MapIcon=MapPin; readonly CartIcon=ShoppingCart; readonly PlusIcon=Plus; readonly SearchIcon=Search; readonly TrashIcon=Trash2; readonly TrendingIcon=TrendingDown; readonly LightIcon=Lightbulb; readonly SaveIcon=Save; readonly CalendarIcon=Calendar; readonly TagIcon=Tag; readonly ListIcon=List;
+  readonly MapIcon=MapPin; readonly CartIcon=ShoppingCart; readonly PlusIcon=Plus; readonly SearchIcon=Search; readonly TrashIcon=Trash2; readonly TrendingIcon=TrendingDown; readonly SaveIcon=Save; readonly ListIcon=List; readonly PencilIcon=Pencil; readonly XIcon=XCircle;
 
-  // Categorias Completas
-  categories = [
-    'Mercearia Básica', 'Hortifruti', 'Carnes e Aves', 'Frios e Laticínios', 
-    'Bebidas', 'Limpeza', 'Higiene Pessoal', 'Padaria', 
-    'Matinais', 'Congelados', 'Pet Shop', 'Utilidades', 'Outros'
-  ];
+  categories = ['Mercearia Básica', 'Hortifruti', 'Carnes e Aves', 'Frios e Laticínios', 'Bebidas', 'Limpeza', 'Higiene Pessoal', 'Padaria', 'Matinais', 'Congelados', 'Pet Shop', 'Utilidades', 'Outros'];
 
   viewMode: 'create' | 'saved' = 'create';
   
-  // Dados da Lista Atual
+  // Estado
+  editingId: number | null = null; // ID da lista que está sendo editada (null se for nova)
+  
   currentListName = '';
   currentCategory = 'Mercearia Básica';
   currentFrequency = 'Semanal';
   shoppingList: string[] = [];
   newItem = '';
   
-  // Dados Gerais
   savedLists: any[] = [];
   suggestions: string[] = [];
   ranking: any[] = [];
 
-  ngOnInit() {
-    this.fetchSavedLists();
-  }
-
-  // --- LÓGICA DE LISTAS SALVAS ---
+  ngOnInit() { this.fetchSavedLists(); }
 
   fetchSavedLists() {
     const user = this.authService.currentUser() as any;
     if (user) {
-      this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/lists?ownerId=${user._id}`)
-        .subscribe(lists => this.savedLists = lists);
+      this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/lists?ownerId=${user._id}`).subscribe(lists => this.savedLists = lists);
     }
+  }
+
+  // --- LÓGICA DE EDIÇÃO E SALVAMENTO ---
+
+  resetForm() {
+    this.editingId = null;
+    this.currentListName = '';
+    this.currentCategory = 'Mercearia Básica';
+    this.currentFrequency = 'Semanal';
+    this.shoppingList = [];
+    this.ranking = [];
+    this.viewMode = 'create';
+  }
+
+  startEditing(list: any) {
+    this.editingId = list._id;
+    this.currentListName = list.name;
+    this.currentCategory = list.category;
+    this.currentFrequency = list.frequency;
+    this.shoppingList = [...list.items]; // Clona os itens
+    this.ranking = [];
+    this.viewMode = 'create'; // Leva para o formulário
+  }
+
+  loadListToCompare(list: any) {
+    // Apenas carrega para comparar, sem entrar em modo de edição de banco
+    this.resetForm(); 
+    this.shoppingList = [...list.items];
+    this.comparePrices();
   }
 
   saveListToDb() {
     if (!this.currentListName) { alert('Dê um nome para sua lista!'); return; }
     const user = this.authService.currentUser() as any;
-    if (!user) { alert('Faça login para salvar listas!'); return; }
+    if (!user) { alert('Faça login!'); return; }
 
     const payload = {
       name: this.currentListName,
@@ -219,32 +263,28 @@ export class ConsumerListComponent implements OnInit {
       ownerId: user._id
     };
 
-    this.http.post('https://mercadofacil-hrvh.onrender.com/api/lists', payload).subscribe({
-      next: () => {
-        alert('Lista salva com sucesso!');
-        this.fetchSavedLists();
-        this.viewMode = 'saved'; // Leva o usuário para ver as listas salvas
-      },
-      error: () => alert('Erro ao salvar.')
-    });
+    if (this.editingId) {
+      // MODO EDIÇÃO (PUT)
+      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/lists/${this.editingId}`, payload).subscribe({
+        next: () => { alert('Lista atualizada!'); this.fetchSavedLists(); this.viewMode = 'saved'; },
+        error: () => alert('Erro ao atualizar.')
+      });
+    } else {
+      // MODO CRIAÇÃO (POST)
+      this.http.post('https://mercadofacil-hrvh.onrender.com/api/lists', payload).subscribe({
+        next: () => { alert('Lista criada!'); this.fetchSavedLists(); this.viewMode = 'saved'; },
+        error: () => alert('Erro ao criar.')
+      });
+    }
   }
 
   deleteList(id: number) {
-    if(confirm('Tem certeza que deseja apagar esta lista?')) {
+    if(confirm('Tem certeza?')) {
       this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/lists/${id}`).subscribe(() => this.fetchSavedLists());
     }
   }
 
-  loadListToCompare(list: any) {
-    this.shoppingList = [...list.items]; // Carrega itens
-    this.currentListName = list.name;
-    this.currentCategory = list.category;
-    this.currentFrequency = list.frequency;
-    this.viewMode = 'create'; // Volta para a tela de comparação
-    this.comparePrices(); // Já roda a comparação direto
-  }
-
-  // --- LÓGICA DE COMPARAÇÃO (Mantida) ---
+  // --- LÓGICA DE PRODUTOS ---
 
   onType(event: any) {
     const value = event.target.value; if (value.includes(',')) return;
@@ -263,7 +303,7 @@ export class ConsumerListComponent implements OnInit {
   comparePrices() {
     if (this.shoppingList.length === 0) return;
     this.http.post<any[]>('https://mercadofacil-hrvh.onrender.com/api/compare', { shoppingList: this.shoppingList }).subscribe({
-      next: (data) => { this.ranking = data; if (data.length === 0) alert('Nenhum produto encontrado nas lojas.'); },
+      next: (data) => { this.ranking = data; if (data.length === 0) alert('Nenhum produto encontrado.'); },
       error: () => alert('Erro ao comparar.')
     });
   }
