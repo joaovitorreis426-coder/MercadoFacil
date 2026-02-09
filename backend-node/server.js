@@ -18,7 +18,7 @@ try {
         console.log('🗑️ BANCO RESETADO PARA ATUALIZAÇÃO DE ESTRUTURA.');
     }
 } catch (err) { console.error(err); }
-// ------------------------------------------------
+
 
 const sequelize = new Sequelize({
     dialect: 'sqlite',
@@ -69,7 +69,7 @@ function normalizeString(str) {
     return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// --- ROTAS PADRÃO (Login, Produtos, etc - Mantidas iguais) ---
+// --- ROTAS PADRÃO (Login, Produtos, etc) ---
 
 app.get('/', (req, res) => res.send('🚀 API Online!'));
 
@@ -203,33 +203,105 @@ app.put('/api/lists/:id', async (req, res) => {
     }
 });
 
-// --- ROTA DE COMPARAÇÃO (MELHORADA) ---
+// ... (Mantenha o resto do código igual até chegar na rota /api/compare)
+
+// 7. Comparar Preços (LÓGICA NOVA: Top 4 + Distância + Preço)
 app.post('/api/compare', async (req, res) => {
     try {
-        const { shoppingList } = req.body;
+        const { shoppingList, userLat, userLng } = req.body; // Recebe GPS do cliente
         if (!shoppingList || shoppingList.length === 0) return res.json([]);
-        const allProducts = await Product.findAll({ where: { status: 'Ativo' }, include: User });
+
+        const allProducts = await Product.findAll({ 
+            where: { status: 'Ativo' }, 
+            include: User 
+        });
+
         const normalizedList = shoppingList.map(item => normalizeString(item));
+
         const matchedProducts = allProducts.filter(p => {
             const pName = normalizeString(p.name);
             return normalizedList.some(item => pName.includes(item));
         });
+
         const storeGroups = {};
+
         matchedProducts.forEach(p => {
             const storeName = p.User ? p.User.storeName : 'Loja Desconhecida';
-            if (!storeGroups[storeName]) storeGroups[storeName] = { storeName, totalPrice: 0, foundItems: [] };
+            
+            // Pega Latitude/Longitude da Loja
+            const storeLat = p.User ? p.User.lat : 0;
+            const storeLng = p.User ? p.User.lng : 0;
+
+            if (!storeGroups[storeName]) {
+                // Calcula distância se o cliente mandou o GPS dele
+                let dist = 0;
+                if (userLat && userLng && storeLat && storeLng) {
+                    dist = getDistanceFromLatLonInKm(userLat, userLng, storeLat, storeLng);
+                }
+
+                storeGroups[storeName] = {
+                    storeName: storeName,
+                    totalPrice: 0,
+                    foundItems: [],
+                    distance: dist, // Guarda a distância
+                    lat: storeLat,
+                    lng: storeLng
+                };
+            }
+
             const priceFloat = parseFloat(p.price.replace(',', '.')) || 0;
             storeGroups[storeName].totalPrice += priceFloat;
-            storeGroups[storeName].foundItems.push({ name: p.name, price: p.price, description: p.description });
+            storeGroups[storeName].foundItems.push({
+                name: p.name,
+                price: p.price,
+                description: p.description,
+                category: p.category
+            });
         });
-        
+
+        // --- LÓGICA DO PÓDIO (Inteligência Artificial de Vendas) ---
         const ranking = Object.values(storeGroups).sort((a, b) => {
-            const dif = b.foundItems.length - a.foundItems.length;
-            if (dif !== 0) return dif;
+            // 1. Critério: QUEM TEM MAIS ITENS GANHA (Soberano)
+            const diffItens = b.foundItems.length - a.foundItems.length;
+            if (diffItens !== 0) return diffItens;
+
+            // 2. Critério: DISTÂNCIA (Se empatou nos itens, o mais perto ganha)
+            // Se a distância for 0 (erro), joga pro final
+            if (a.distance > 0 && b.distance > 0) {
+                const diffDist = a.distance - b.distance;
+                // Se a diferença de distância for grande (> 2km), prioriza distância
+                // Se for perto, deixa o preço decidir
+                if (Math.abs(diffDist) > 2.0) return diffDist; 
+            }
+
+            // 3. Critério: PREÇO (Se empatou itens e distância é parecida, o barato ganha)
             return a.totalPrice - b.totalPrice;
         });
-        res.json(ranking);
-    } catch (error) { res.status(500).json({ error: 'Erro ao comparar' }); }
+
+        // PEGA SÓ OS TOP 4
+        res.json(ranking.slice(0, 4));
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao comparar' });
+    }
 });
+
+// FUNÇÃO MATEMÁTICA PARA CALCULAR DISTÂNCIA EM KM (Haversine)
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Raio da terra em km
+  const dLat = deg2rad(lat2-lat1);  
+  const dLon = deg2rad(lon2-lon1); 
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const d = R * c; 
+  return parseFloat(d.toFixed(1)); // Retorna com 1 casa decimal (ex: 2.5 km)
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180);
+}
 
 app.listen(PORT, () => console.log(`🔥 Servidor rodando na porta ${PORT}`));
