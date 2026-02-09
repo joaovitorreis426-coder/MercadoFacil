@@ -3,8 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-// Importando o Módulo do Scanner e os Ícones
-import { ZXingScannerModule } from '@zxing/ngx-scanner';
+import { ZXingScannerModule } from '@zxing/ngx-scanner'; // Scanner
 import { LucideAngularModule, LayoutDashboard, Package, LogOut, Plus, X, Pencil, Trash2, Settings, Store, MapPin, AlertTriangle, CheckCircle, XCircle, Filter, Scan, StopCircle, Camera } from 'lucide-angular';
 import { ButtonComponent } from '../../../shared/ui/button/button.component';
 import { AuthService } from '../../../core/services/auth.service';
@@ -12,7 +11,6 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-seller-dashboard',
   standalone: true,
-  // ADICIONADO: ZXingScannerModule para o leitor funcionar
   imports: [CommonModule, FormsModule, LucideAngularModule, ButtonComponent, ZXingScannerModule],
   template: `
     <div class="flex h-screen bg-gray-100 font-sans">
@@ -20,10 +18,9 @@ import { AuthService } from '../../../core/services/auth.service';
       <aside class="w-64 bg-slate-900 text-white hidden md:flex flex-col shadow-xl">
         <div class="p-6 border-b border-slate-800">
           <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-400">
-            <lucide-icon [img]="StoreIcon" class="h-6 w-6"></lucide-icon>
-            Painel Loja
+            <lucide-icon [img]="StoreIcon" class="h-6 w-6"></lucide-icon> Painel Loja
           </h1>
-          <p class="text-xs text-slate-400 mt-1 truncate">{{ storeName || 'Configure sua loja' }}</p>
+          <p class="text-xs text-slate-400 mt-1 truncate">{{ storeName || 'Loja sem nome' }}</p>
         </div>
         
         <nav class="flex-1 px-4 py-6 space-y-2">
@@ -137,16 +134,16 @@ import { AuthService } from '../../../core/services/auth.service';
 
                 <div class="grid gap-6 md:grid-cols-2">
                   <div class="col-span-2 md:col-span-1">
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Código GTIN</label>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">GTIN (Código de Barras)</label>
                     <div class="flex gap-2">
-                      <input type="text" [(ngModel)]="currentProduct.gtin" class="w-full border-gray-300 rounded-lg p-3 bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Código de barras">
-                      <button (click)="searchGtin(currentProduct.gtin)" class="bg-gray-200 px-3 rounded font-bold text-xs hover:bg-gray-300">Buscar</button>
+                       <input type="text" [(ngModel)]="currentProduct.gtin" class="w-full border-gray-300 rounded-lg p-3 bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ex: 7891000...">
+                       <button (click)="searchGtin(currentProduct.gtin)" class="bg-gray-200 px-3 rounded font-bold text-xs hover:bg-gray-300">Buscar</button>
                     </div>
                   </div>
 
                   <div class="col-span-2 md:col-span-1">
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nome do Produto *</label>
-                    <input type="text" [(ngModel)]="currentProduct.name" class="w-full border-gray-300 rounded-lg p-3 bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ex: Arroz Branco 5kg">
+                    <input type="text" [(ngModel)]="currentProduct.name" class="w-full border-gray-300 rounded-lg p-3 bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ex: Arroz Branco">
                   </div>
                   
                   <div class="col-span-2 md:col-span-1">
@@ -157,7 +154,7 @@ import { AuthService } from '../../../core/services/auth.service';
                   <div class="col-span-2 md:col-span-1">
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Categoria *</label>
                     <select [(ngModel)]="currentProduct.category" class="w-full border-gray-300 rounded-lg p-3 bg-white outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                      <option value="" disabled selected>Selecione uma categoria...</option>
+                      <option value="" disabled selected>Selecione...</option>
                       @for (cat of categoriesList; track cat) { <option [value]="cat">{{ cat }}</option> }
                     </select>
                   </div>
@@ -165,22 +162,22 @@ import { AuthService } from '../../../core/services/auth.service';
                   <div class="col-span-2 md:col-span-1">
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
                     <select [(ngModel)]="currentProduct.status" class="w-full border-gray-300 rounded-lg p-3 bg-white outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                      <option value="Ativo">🟢 Ativo (Visível)</option>
-                      <option value="Esgotado">🔴 Esgotado (Oculto)</option>
+                      <option value="Ativo">🟢 Ativo</option>
+                      <option value="Esgotado">🔴 Esgotado</option>
                     </select>
                   </div>
 
                   <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Descrição</label>
-                    <textarea [(ngModel)]="currentProduct.description" rows="2" placeholder="Detalhes adicionais..." class="w-full border-gray-300 rounded-lg p-3 bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                    <textarea [(ngModel)]="currentProduct.description" rows="2" placeholder="Detalhes..." class="w-full border-gray-300 rounded-lg p-3 bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                   </div>
                 </div>
-                
+
                 <div *ngIf="currentProduct.image" class="mt-4 flex items-center gap-4 p-3 border rounded bg-gray-50">
                     <img [src]="currentProduct.image" class="h-16 w-16 object-contain bg-white rounded border">
                     <span class="text-xs text-green-600 font-bold">Foto encontrada!</span>
                 </div>
-
+                
                 <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
                   <button (click)="openCreateForm()" class="px-4 py-2 text-gray-500 hover:text-gray-700 font-bold transition-colors">Cancelar</button>
                   <app-button (click)="saveProduct()" className="bg-green-600 hover:bg-green-700 text-white shadow-md">Salvar Produto</app-button>
@@ -206,7 +203,7 @@ import { AuthService } from '../../../core/services/auth.service';
                         <tr class="hover:bg-indigo-50/50 transition-colors group">
                           <td class="p-4">
                             <div class="font-bold text-slate-800 text-base">{{ product.name }}</div>
-                            <div class="text-xs text-gray-400">GTIN: {{ product.gtin || 'n/a' }}</div>
+                            <div class="text-xs text-gray-400">GTIN: {{ product.gtin || '-' }}</div>
                           </td>
                           <td class="p-4"><span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-xs font-bold border border-gray-200">{{ product.category }}</span></td>
                           <td class="p-4">
@@ -283,7 +280,7 @@ export class SellerDashboardComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
 
-  // ÍCONES (Adicionados Scan, StopCircle, Camera para o leitor)
+  // Ícones completos
   readonly LayoutDashboardIcon = LayoutDashboard; readonly StoreIcon = Store; readonly PackageIcon = Package; readonly SettingsIcon = Settings; readonly LogOutIcon = LogOut; readonly PlusIcon = Plus; readonly XIcon = X; readonly PencilIcon = Pencil; readonly Trash2Icon = Trash2; readonly MapPinIcon = MapPin; readonly AlertIcon = AlertTriangle; readonly CheckCircleIcon = CheckCircle; readonly XCircleIcon = XCircle; readonly FilterIcon = Filter; readonly ScanIcon = Scan; readonly StopIcon = StopCircle; readonly CameraIcon = Camera;
 
   readonly categoriesList = ['Mercearia', 'Hortifruti', 'Padaria', 'Açougue e Frios', 'Bebidas', 'Laticínios', 'Limpeza', 'Higiene Pessoal', 'Matinais', 'Enlatados', 'Biscoitos', 'Massas', 'Congelados', 'Utilidades', 'Pet Shop'];
@@ -296,6 +293,8 @@ export class SellerDashboardComponent implements OnInit {
   showForm = false;
   isEditing = false;
   editingId: string | null = null;
+  
+  // SCANNER
   isScanning = false;
   
   currentProduct = { name: '', price: '', status: 'Ativo', description: '', category: '', gtin: '', image: '' };
@@ -312,12 +311,12 @@ export class SellerDashboardComponent implements OnInit {
   clearFilter() { this.filterStatus = null; }
   goToProducts() { this.currentView = 'products'; }
 
-  // FUNÇÕES DO SCANNER (Integradas)
+  // --- LÓGICA DO SCANNER ---
   toggleScanner() { this.isScanning = !this.isScanning; }
-  onCodeResult(result: string) {
-    this.currentProduct.gtin = result;
+  onCodeResult(resultString: string) {
+    this.currentProduct.gtin = resultString;
     this.isScanning = false;
-    this.searchGtin(result);
+    this.searchGtin(resultString);
   }
   searchGtin(code: string) {
     if(!code) return;
@@ -348,7 +347,7 @@ export class SellerDashboardComponent implements OnInit {
       navigator.geolocation.getCurrentPosition((position) => {
         this.storeSettings.lat = position.coords.latitude;
         this.storeSettings.lng = position.coords.longitude;
-        alert('📍 Localização capturada! Clique em Salvar Alterações.');
+        alert('📍 Localização capturada!');
       }, () => alert('⚠️ Erro: Permita o acesso ao GPS no navegador!'));
     } else alert('Seu navegador não suporta GPS');
   }
@@ -404,7 +403,7 @@ export class SellerDashboardComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   
-  deleteProduct(id: string) { if(confirm('Tem certeza que deseja excluir?')) this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe(()=>this.checkUserAndFetch()); }
+  deleteProduct(id: string) { if(confirm('Excluir?')) this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe(()=>this.checkUserAndFetch()); }
   resetForm() { this.showForm=false; this.currentProduct={name:'',price:'',status:'Ativo', description: '', category: '', gtin: '', image: ''}; this.checkUserAndFetch(); }
   openCreateForm() { this.showForm=!this.showForm; this.currentProduct={name:'',price:'',status:'Ativo', description: '', category: '', gtin: '', image: ''}; this.isEditing=false; }
   logout() { this.authService.logout(); }
