@@ -149,7 +149,7 @@ import { AuthService } from '../../../core/services/auth.service';
                       <h4 class="font-bold text-lg text-slate-800 leading-tight">{{ result.storeName }}</h4>
                       <div class="flex items-center justify-center gap-1 mt-2 text-sm text-blue-600 font-medium bg-blue-50 py-1 rounded">
                         <lucide-icon [img]="NavIcon" class="w-3 h-3"></lucide-icon> 
-                        {{ result.distance > 0 ? result.distance + ' km' : 'Distância n/a' }}
+                        {{ result.distance !== null ? result.distance + ' km' : 'Distância n/a' }}
                       </div>
                     </div>
 
