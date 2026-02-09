@@ -16,22 +16,15 @@ import { AuthService } from '../../../core/services/auth.service';
       
       <header class="bg-white shadow-md sticky top-0 z-10 border-b border-blue-100">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          
           <div class="flex items-center gap-3">
             <a routerLink="/consumer/map" class="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50" title="Voltar para o Mapa">
               <lucide-icon [img]="ArrowLeftIcon" class="w-6 h-6"></lucide-icon>
             </a>
-
-            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-              Mercado Fácil
-            </h1>
+            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">Mercado Fácil</h1>
           </div>
-
           <div class="flex gap-2">
-            <button (click)="resetForm()" [class.bg-blue-100]="viewMode === 'create'" class="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors" title="Nova Lista">
-              <lucide-icon [img]="PlusIcon" class="w-5 h-5"></lucide-icon>
-            </button>
-            <button (click)="viewMode = 'saved'" [class.bg-blue-100]="viewMode === 'saved'" class="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors relative" title="Minhas Listas">
+            <button (click)="resetForm()" [class.bg-blue-100]="viewMode === 'create'" class="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors"><lucide-icon [img]="PlusIcon" class="w-5 h-5"></lucide-icon></button>
+            <button (click)="viewMode = 'saved'" [class.bg-blue-100]="viewMode === 'saved'" class="p-2 rounded-full text-blue-600 hover:bg-blue-50 transition-colors relative">
               <lucide-icon [img]="ListIcon" class="w-5 h-5"></lucide-icon>
               @if(savedLists.length > 0) { <span class="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full"></span> }
             </button>
@@ -49,9 +42,7 @@ import { AuthService } from '../../../core/services/auth.service';
              
              @if (savedLists.length === 0) {
                 <div class="text-center p-10 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
-                  Nenhuma lista salva ainda.
-                  <br>
-                  <button (click)="resetForm()" class="text-blue-600 font-bold underline mt-2">Criar agora</button>
+                  Nenhuma lista salva.<br><button (click)="resetForm()" class="text-blue-600 font-bold underline mt-2">Criar agora</button>
                 </div>
              }
 
@@ -77,7 +68,6 @@ import { AuthService } from '../../../core/services/auth.service';
 
         @if (viewMode === 'create') {
           <section class="bg-white p-6 rounded-xl shadow-sm border border-blue-100">
-            
             <div class="flex justify-between items-center mb-6">
               <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
                 @if (editingId) { <lucide-icon [img]="PencilIcon" class="text-orange-500"></lucide-icon> Editando } 
@@ -123,8 +113,7 @@ import { AuthService } from '../../../core/services/auth.service';
             </div>
 
             <p class="text-[11px] text-slate-400 mb-4 pl-1 flex items-center gap-1">
-              <lucide-icon [img]="InfoIcon" class="w-3 h-3"></lucide-icon>
-              Dica: Digite vários produtos separados por vírgula (Ex: Arroz, Feijão, Açúcar)
+              <lucide-icon [img]="InfoIcon" class="w-3 h-3"></lucide-icon> Dica: Digite vários produtos separados por vírgula (Ex: Arroz, Feijão, Açúcar)
             </p>
 
             @if (shoppingList.length > 0) {
@@ -135,7 +124,6 @@ import { AuthService } from '../../../core/services/auth.service';
                   </span>
                 }
               </div>
-              
               <app-button (click)="comparePrices()" className="w-full justify-center bg-green-600 hover:bg-green-700 text-white gap-2 py-4 text-lg shadow-lg shadow-green-100 transition-transform active:scale-95">
                 @if(loadingLocation) { <span>Localizando você...</span> }
                 @else { <lucide-icon [img]="SearchIcon" class="w-5 h-5"></lucide-icon> Comparar Preços Agora }
@@ -172,7 +160,7 @@ import { AuthService } from '../../../core/services/auth.service';
                       </span>
                     </div>
 
-                    <div class="p-4 flex-1 bg-gray-50/50">
+                    <div class="p-4 flex-1 bg-gray-50/50 pb-6">
                       <div class="flex justify-between items-center mb-2">
                         <span class="text-xs font-bold text-slate-500">ITENS ENCONTRADOS</span>
                         <span class="text-xs font-bold px-2 py-0.5 rounded-full" [class.bg-green-100]="$index === 0" [class.text-green-700]="$index === 0" [class.bg-gray-200]="$index > 0">{{ result.foundItems.length }} / {{ shoppingList.length }}</span>
@@ -186,14 +174,8 @@ import { AuthService } from '../../../core/services/auth.service';
                         }
                       </div>
                     </div>
-
-                    <div class="p-3 bg-white border-t border-gray-100">
-                      <button class="w-full py-2 rounded-lg text-sm font-bold text-white transition-colors" [class.bg-green-600]="$index === 0" [class.hover:bg-green-700]="$index === 0" [class.bg-slate-600]="$index > 0" [class.hover:bg-slate-700]="$index > 0">
-                         {{ $index === 0 ? 'Ir para Loja' : 'Ver Detalhes' }}
-                      </button>
+                    
                     </div>
-
-                  </div>
                 }
               </div>
             </div>
@@ -208,7 +190,6 @@ export class ConsumerListComponent implements OnInit {
   private authService = inject(AuthService);
   private ngZone = inject(NgZone);
 
-  // Importei os ícones ArrowLeft e Info
   readonly MapIcon=MapPin; readonly CartIcon=ShoppingCart; readonly PlusIcon=Plus; readonly SearchIcon=Search; readonly TrashIcon=Trash2; readonly TrendingIcon=TrendingDown; readonly SaveIcon=Save; readonly ListIcon=List; readonly PencilIcon=Pencil; readonly XIcon=XCircle; readonly TrophyIcon=Trophy; readonly NavIcon=Navigation; readonly ArrowLeftIcon=ArrowLeft; readonly InfoIcon=Info;
 
   categories = ['Mercearia', 'Hortifruti', 'Carnes', 'Frios', 'Bebidas', 'Limpeza', 'Higiene', 'Padaria', 'Outros'];
@@ -223,7 +204,6 @@ export class ConsumerListComponent implements OnInit {
   savedLists: any[] = [];
   suggestions: string[] = [];
   ranking: any[] = [];
-  
   loadingLocation = false;
 
   ngOnInit() { this.fetchSavedLists(); }
