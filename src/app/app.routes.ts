@@ -1,33 +1,36 @@
-
 import { Routes } from '@angular/router';
 
-export const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
-  { path: 'login', loadComponent: () => import('./pages/auth/login/login.component').then(m => m.LoginComponent) },
-  { path: 'register', loadComponent: () => import('./pages/auth/register/register.component').then(m => m.RegisterComponent) },
-  
-  // Cliente
-  {
-    path: 'consumer',
-    loadComponent: () => import('./pages/consumer/layout/consumer-layout.component').then(m => m.ConsumerLayoutComponent),
-    children: [
-      { path: '', redirectTo: 'map', pathMatch: 'full' },
-      { path: 'list', loadComponent: () => import('./pages/consumer/list/list.component').then(m => m.ConsumerListComponent) },
-      { path: 'map', loadComponent: () => import('./pages/consumer/map/map.component').then(m => m.ConsumerMapComponent) }
-    ]
-  },
+// 1. Importação da nova Landing Page
+import { LandingPageComponent } from './pages/landing/landing.component';
 
-  // Vendedor (Painel Tudo-em-Um)
-  {
-    path: 'seller',
-    children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'dashboard', loadComponent: () => import('./pages/seller/dashboard/dashboard.component').then(m => m.SellerDashboardComponent) },
-      // Redireciona 'products' para 'dashboard' para evitar erro 404
-      { path: 'products', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'profile', redirectTo: 'dashboard', pathMatch: 'full' }
-    ]
-  },
+// Importação das outras páginas existentes
+import { AuthPageComponent } from './pages/auth/auth.component';
+import { SellerDashboardComponent } from './pages/seller/dashboard/dashboard.component';
+import { StoreSetupComponent } from './pages/seller/store-setup/store-setup.component';
+import { ConsumerListComponent } from './pages/consumer/list/list.component';
+
+export const routes: Routes = [
+  // --- ROTA INICIAL (A MELHORIA) ---
+  // Quando acessar http://localhost:4200/, abre a capa do site (Landing Page)
+  { path: '', component: LandingPageComponent }, 
   
-  { path: '**', redirectTo: 'login' }
+  // --- AUTENTICAÇÃO ---
+  { path: 'auth', component: AuthPageComponent },
+  
+  // --- VENDEDOR ---
+  { path: 'seller/dashboard', component: SellerDashboardComponent },
+  { path: 'seller/setup', component: StoreSetupComponent },
+
+  // --- CONSUMIDOR ---
+  { 
+    path: 'consumer/map', 
+    // Carregamento dinâmico (Lazy Load) para o Mapa não pesar na inicialização
+    loadComponent: () => import('./pages/consumer/map/map.component')
+      .then(m => m.MapComponent)
+      .catch(err => {
+        console.error('Erro ao carregar mapa:', err);
+        return AuthPageComponent; // Fallback de segurança
+      }) 
+  },
+  { path: 'consumer/list', component: ConsumerListComponent }
 ];
