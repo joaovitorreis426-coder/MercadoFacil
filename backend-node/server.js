@@ -54,13 +54,30 @@ Product.belongsTo(User, { foreignKey: 'ownerId' });
 // --- ROTAS ---
 
 // Auth
+// 1. Autenticação (Login/Registro simplificado)
 app.post('/api/auth/register', async (req, res) => {
-    try { const user = await User.create(req.body); res.json(user); } catch (e) { res.status(500).json({ error: 'Erro ao criar conta' }); }
+    try {
+        const user = await User.create(req.body);
+        res.json(user);
+    } catch (e) {
+        console.error('🛑 ERRO NO CADASTRO:', e);
+        // Devolve o erro real para o navegador
+        res.status(500).json({ error: e.message || 'Erro ao criar conta no Banco de Dados' });
+    }
 });
 
 app.post('/api/auth/login', async (req, res) => {
-    const user = await User.findOne({ where: { email: req.body.email, password: req.body.password } });
-    if (user) res.json(user); else res.status(401).json({ error: 'Dados inválidos' });
+    try {
+        const user = await User.findOne({ where: { email: req.body.email, password: req.body.password } });
+        if (user) {
+            res.json(user);
+        } else {
+            res.status(401).json({ error: 'Dados inválidos' });
+        }
+    } catch (e) {
+        console.error('🛑 ERRO NO LOGIN:', e);
+        res.status(500).json({ error: e.message || 'Erro interno ao buscar usuário' });
+    }
 });
 
 app.put('/api/user/update-profile', async (req, res) => {
@@ -134,4 +151,7 @@ function getDistance(lat1,lon1,lat2,lon2) {
 }
 function d2r(d) { return d*(Math.PI/180); }
 
-sequelize.sync().then(() => app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`)));
+// O { force: true } apaga o banco velho e recria um novo do zero com as colunas certas
+sequelize.sync({ force: true }).then(() => {
+    app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+});
