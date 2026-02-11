@@ -47,11 +47,11 @@ import { AuthService } from '../../../core/services/auth.service';
              }
 
              <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-               @for (list of savedLists; track list._id) {
+               @for (list of savedLists; track list.id) {
                  <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:border-blue-300 transition-all group relative">
                     <div class="absolute top-3 right-3 flex gap-2">
                       <button (click)="startEditing(list)" class="text-gray-400 hover:text-blue-600"><lucide-icon [img]="PencilIcon" class="w-4 h-4"></lucide-icon></button>
-                      <button (click)="deleteList(list._id)" class="text-gray-400 hover:text-red-500"><lucide-icon [img]="TrashIcon" class="w-4 h-4"></lucide-icon></button>
+                      <button (click)="deleteList(list.id)" class="text-gray-400 hover:text-red-500"><lucide-icon [img]="TrashIcon" class="w-4 h-4"></lucide-icon></button>
                     </div>
                     <div class="flex items-center gap-2 mb-2">
                       <span class="text-[10px] font-bold uppercase px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100">{{ list.category }}</span>
@@ -211,16 +211,16 @@ export class ConsumerListComponent implements OnInit {
   fetchSavedLists() {
     const user = this.authService.currentUser() as any;
     if (user) {
-      this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/lists?ownerId=${user._id}`).subscribe(lists => this.savedLists = lists);
+      this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/lists?ownerId=${user.id}`).subscribe(lists => this.savedLists = lists);
     }
   }
 
   resetForm() { this.editingId = null; this.currentListName = ''; this.shoppingList = []; this.ranking = []; this.viewMode = 'create'; }
-  startEditing(list: any) { this.editingId = list._id; this.currentListName = list.name; this.shoppingList = [...list.items]; this.ranking = []; this.viewMode = 'create'; }
+  startEditing(list: any) { this.editingId = list.id; this.currentListName = list.name; this.shoppingList = [...list.items]; this.ranking = []; this.viewMode = 'create'; }
   loadListToCompare(list: any) { this.resetForm(); this.shoppingList = [...list.items]; this.comparePrices(); }
   saveListToDb() {
     const user = this.authService.currentUser() as any; if (!user) return alert('Faça Login');
-    const payload = { name: this.currentListName, category: this.currentCategory, frequency: this.currentFrequency, items: this.shoppingList, ownerId: user._id };
+    const payload = { name: this.currentListName, category: this.currentCategory, frequency: this.currentFrequency, items: this.shoppingList, ownerId: user.id };
     const req = this.editingId ? this.http.put(`https://mercadofacil-hrvh.onrender.com/api/lists/${this.editingId}`, payload) : this.http.post('https://mercadofacil-hrvh.onrender.com/api/lists', payload);
     req.subscribe(() => { alert('Salvo!'); this.fetchSavedLists(); this.viewMode = 'saved'; });
   }

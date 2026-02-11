@@ -101,7 +101,7 @@ import { AuthService } from '../../../core/services/auth.service';
           </div>
           <div class="flex gap-2">
             <button (click)="editProduct(product)" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"><lucide-icon [img]="EditIcon" class="w-5 h-5"></lucide-icon></button>
-            <button (click)="deleteProduct(product._id)" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"><lucide-icon [img]="TrashIcon" class="w-5 h-5"></lucide-icon></button>
+            <button (click)="deleteProduct(product.id)" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"><lucide-icon [img]="TrashIcon" class="w-5 h-5"></lucide-icon></button>
           </div>
         </div>
         
@@ -137,7 +137,7 @@ export class SellerProductsComponent implements OnInit {
   loadProducts() {
     const user = this.authService.currentUser() as any;
     if (user) {
-      this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/products?ownerId=${user._id}`).subscribe(data => this.products = data);
+      this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/products?ownerId=${user.id}`).subscribe(data => this.products = data);
     }
   }
 
@@ -185,10 +185,10 @@ export class SellerProductsComponent implements OnInit {
     const user = this.authService.currentUser() as any;
     if (!user) return;
 
-    const payload = { ...this.currentProduct, ownerId: user._id };
+    const payload = { ...this.currentProduct, ownerId: user.id };
 
-    if (this.isEditing && this.currentProduct._id) {
-      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${this.currentProduct._id}`, payload).subscribe(() => {
+    if (this.isEditing && this.currentProduct.id) {
+      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${this.currentProduct.id}`, payload).subscribe(() => {
         this.loadProducts(); this.closeForm();
       });
     } else {
