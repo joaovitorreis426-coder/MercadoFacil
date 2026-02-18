@@ -197,13 +197,13 @@ app.get('/api/products/search', async (req, res) => {
     } catch (error) { res.status(500).json([]); }
 });
 
-// 7. Comparar Preços (CORRIGIDO: Só busca produtos ATIVOS)
+// 7. Comparar Preços (LÓGICA NOVA: Prioriza quem tem mais itens)
 app.post('/api/compare', async (req, res) => {
     try {
         const { shoppingList } = req.body;
         if (!shoppingList || shoppingList.length === 0) return res.json([]);
 
-        // FILTRO IMPORTANTE: Só pega produtos com status 'Ativo'
+        // Busca apenas produtos ATIVOS
         const allProducts = await Product.findAll({ 
             where: { status: 'Ativo' }, 
             include: User 
@@ -217,10 +217,18 @@ app.post('/api/compare', async (req, res) => {
         });
 
         const storeGroups = {};
+
         matchedProducts.forEach(p => {
             const storeName = p.User ? p.User.storeName : 'Loja Desconhecida';
-            if (!storeGroups[storeName]) storeGroups[storeName] = { storeName, totalPrice: 0, foundItems: [] };
             
+            if (!storeGroups[storeName]) {
+                storeGroups[storeName] = {
+                    storeName: storeName,
+                    totalPrice: 0,
+                    foundItems: []
+                };
+            }
+
             const priceFloat = parseFloat(p.price.replace(',', '.')) || 0;
             storeGroups[storeName].totalPrice += priceFloat;
             storeGroups[storeName].foundItems.push({
@@ -231,7 +239,23 @@ app.post('/api/compare', async (req, res) => {
             });
         });
 
-        const ranking = Object.values(storeGroups).sort((a, b) => a.totalPrice - b.totalPrice);
+        // --- A MÁGICA ACONTECE AQUI ---
+        const ranking = Object.values(storeGroups).sort((a, b) => {
+            // 1. Critério: Quantidade de Itens (Quem tem MAIS vem primeiro)
+            // Se B tem 10 e A tem 5 -> (10 - 5) é positivo, então B ganha.
+            const diferencaItens = b.foundItems.length - a.foundItems.length;
+
+            // Se a diferença não for zero, ordena por quantidade
+            if (diferencaItens !== 0) {
+                return diferencaItens;
+            }
+
+            // 2. Critério: Preço (Quem é MAIS BARATO vem primeiro)
+            // Só chega aqui se os dois tiverem a mesma quantidade de itens
+            return a.totalPrice - b.totalPrice;
+        });
+        // ------------------------------
+
         res.json(ranking);
 
     } catch (error) {
@@ -239,5 +263,6 @@ app.post('/api/compare', async (req, res) => {
         res.status(500).json({ error: 'Erro ao comparar' });
     }
 });
+    
 
 app.listen(PORT, () => console.log(`🔥 Servidor BLINDADO rodando na porta ${PORT}`));
