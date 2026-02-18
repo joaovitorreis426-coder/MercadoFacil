@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { LucideAngularModule, MapPin, ShoppingCart, Search, Trash2, TrendingDown, Plus, Lightbulb, Store } from 'lucide-angular';
+import { LucideAngularModule, MapPin, ShoppingCart, Search, Trash2, TrendingDown, Plus, Lightbulb, Store, Save } from 'lucide-angular';
 import { ButtonComponent } from '../../../shared/ui/button/button.component';
+import { AuthService } from '../../../core/services/auth.service'; // <-- Importação do AuthService adicionada
 
 @Component({
   selector: 'app-consumer-list',
@@ -100,7 +101,8 @@ import { ButtonComponent } from '../../../shared/ui/button/button.component';
           </div>
 
           @if (shoppingList.length > 0) {
-            <div class="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+            
+            <div class="flex flex-wrap gap-2 mb-4 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
               @for (item of shoppingList; track $index) {
                 <span class="bg-white border border-blue-200 text-blue-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 shadow-sm animate-in fade-in zoom-in font-medium">
                   {{ item }}
@@ -109,6 +111,64 @@ import { ButtonComponent } from '../../../shared/ui/button/button.component';
                   </button>
                 </span>
               }
+            </div>
+
+            <div class="flex justify-end mb-6">
+              <button (click)="saveCurrentList()" class="text-sm bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2 rounded-lg font-bold hover:bg-blue-100 transition-colors flex items-center gap-2">
+                <lucide-icon [img]="SaveIcon" class="w-4 h-4"></lucide-icon>
+                Salvar esta Lista
+              </button>
+            </div>
+          }
+
+          @if (savedLists.length > 0) {
+            <div class="mb-6 bg-slate-100 p-4 rounded-xl border border-slate-200">
+              <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <lucide-icon [img]="CartIcon" class="w-4 h-4"></lucide-icon>
+                Minhas Listas Salvas
+              </h3>
+              
+              <div class="flex gap-3 overflow-x-auto pb-2">
+                @for (list of savedLists; track list.id) {
+                  <div class="bg-white border border-slate-200 rounded-lg p-3 min-w-[160px] shadow-sm flex flex-col justify-between">
+                    <div>
+                      <span class="font-bold text-slate-800 text-sm block truncate">{{ list.name }}</span>
+                      <span class="text-xs text-slate-500 mb-3 block">{{ list.items.length }} produtos</span>
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                      <button (click)="useSavedList(list)" class="flex-1 bg-green-50 text-green-700 font-bold text-xs py-1.5 rounded hover:bg-green-100 border border-green-200 transition-colors">
+                        Usar Lista
+                      </button>
+                      <button (click)="deleteList(list.id)" class="bg-red-50 text-red-500 hover:text-red-700 hover:bg-red-100 p-1.5 rounded border border-red-100 transition-colors">
+                        <lucide-icon [img]="TrashIcon" class="w-3 h-3"></lucide-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (shoppingList.length > 0) {
+            <div class="flex gap-2 mb-4 bg-slate-200 p-1.5 rounded-lg w-fit mx-auto">
+              <button 
+                (click)="sortBy = 'price'; ranking.length > 0 ? comparePrices() : null" 
+                [class.bg-white]="sortBy === 'price'"
+                [class.shadow-sm]="sortBy === 'price'"
+                [class.text-green-700]="sortBy === 'price'"
+                [class.text-slate-500]="sortBy !== 'price'"
+                class="px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
+                💰 Mais Barato
+              </button>
+              <button 
+                (click)="sortBy = 'distance'; ranking.length > 0 ? comparePrices() : null" 
+                [class.bg-white]="sortBy === 'distance'"
+                [class.shadow-sm]="sortBy === 'distance'"
+                [class.text-blue-700]="sortBy === 'distance'"
+                [class.text-slate-500]="sortBy !== 'distance'"
+                class="px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
+                📍 Mais Perto
+              </button>
             </div>
 
             <app-button (click)="comparePrices()" className="w-full justify-center bg-green-600 hover:bg-green-700 text-white gap-2 py-4 text-lg shadow-lg shadow-green-100">
@@ -181,6 +241,7 @@ import { ButtonComponent } from '../../../shared/ui/button/button.component';
 })
 export class ConsumerListComponent implements OnInit {
   private http = inject(HttpClient);
+  private authService = inject(AuthService);
 
   readonly MapIcon = MapPin;
   readonly MapPinIcon = MapPin;
@@ -191,11 +252,14 @@ export class ConsumerListComponent implements OnInit {
   readonly TrendingIcon = TrendingDown;
   readonly LightIcon = Lightbulb;
   readonly StoreIcon = Store;
+  readonly SaveIcon = Save;
 
   newItem = '';
   shoppingList: string[] = [];
   suggestions: string[] = [];
   ranking: any[] = [];
+  savedLists: any[] = [];
+  sortBy: string = 'price'; 
   
   // Variáveis para Geolocalização
   nearbySellers: any[] = [];
@@ -205,9 +269,10 @@ export class ConsumerListComponent implements OnInit {
 
   ngOnInit() {
     this.getUserLocation();
+    this.loadSavedLists();
   }
 
-  // 1. Pega GPS do Usuário
+  // --- LÓGICA DE GEOLOCALIZAÇÃO ---
   getUserLocation() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -219,7 +284,6 @@ export class ConsumerListComponent implements OnInit {
         (error) => {
           console.error("Erro GPS:", error);
           this.loadingLocation = false;
-          // Se der erro, busca os vendedores mesmo assim, mas sem distância
           this.fetchSellers();
         }
       );
@@ -229,11 +293,9 @@ export class ConsumerListComponent implements OnInit {
     }
   }
 
-  // 2. Busca Vendedores e Calcula Distância
   fetchSellers() {
     this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/sellers').subscribe({
       next: (sellers) => {
-        // Se temos a localização do usuário, calculamos a distância
         if (this.myLat && this.myLng) {
           this.nearbySellers = sellers.map(seller => {
             const dist = this.calculateDistance(this.myLat!, this.myLng!, seller.lat, seller.lng);
@@ -244,12 +306,9 @@ export class ConsumerListComponent implements OnInit {
             };
           });
           
-          // Ordena do mais perto para o mais longe e pega os top 4
           this.nearbySellers.sort((a, b) => a.distance - b.distance);
           this.nearbySellers = this.nearbySellers.slice(0, 4);
-
         } else {
-          // Sem GPS, só mostra a lista
           this.nearbySellers = sellers.slice(0, 4);
         }
         this.loadingLocation = false;
@@ -258,10 +317,9 @@ export class ConsumerListComponent implements OnInit {
     });
   }
 
-  // Fórmula Matemática de Haversine (Calcula distância em KM entre dois pontos)
   calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    if (!lat2 || !lon2) return 9999; // Se o mercado não tem local, joga pro final
-    const R = 6371; // Raio da Terra em km
+    if (!lat2 || !lon2) return 9999; 
+    const R = 6371; 
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);
     const a =
@@ -276,8 +334,56 @@ export class ConsumerListComponent implements OnInit {
     return deg * (Math.PI / 180);
   }
 
-  // --- LÓGICA DO COMPARADOR ---
+  // --- LÓGICA DE LISTAS SALVAS ---
+  loadSavedLists() {
+    const user = this.authService.currentUser();
+    if (!user) return;
+    
+    this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/lists?ownerId=${user.id}`).subscribe({
+      next: (lists) => this.savedLists = lists,
+      error: (err) => console.error('Erro ao carregar listas', err)
+    });
+  }
 
+  saveCurrentList() {
+    const user = this.authService.currentUser();
+    if (!user || this.shoppingList.length === 0) {
+      alert('Adicione itens na lista antes de salvar!');
+      return;
+    }
+
+    const name = prompt('Dê um nome para esta lista (ex: Compra do Mês):');
+    if (!name) return;
+
+    const payload = {
+      name: name,
+      items: this.shoppingList, 
+      ownerId: user.id
+    };
+
+    this.http.post('https://mercadofacil-hrvh.onrender.com/api/lists', payload).subscribe({
+      next: () => {
+        alert('✅ Lista salva com sucesso!');
+        this.loadSavedLists(); 
+      },
+      error: () => alert('❌ Erro ao salvar lista.')
+    });
+  }
+
+  useSavedList(list: any) {
+    this.shoppingList = list.items;
+    this.comparePrices(); 
+  }
+
+  deleteList(id: number) {
+    if (!confirm('Tem certeza que deseja apagar esta lista salva?')) return;
+    
+    this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/lists/${id}`).subscribe({
+      next: () => this.loadSavedLists()
+    });
+  }
+
+  // --- LÓGICA DO COMPARADOR ---
   onType(event: any) {
     const value = event.target.value;
     if (value.includes(',')) return;
@@ -303,21 +409,16 @@ export class ConsumerListComponent implements OnInit {
     this.shoppingList.splice(index, 1);
   }
 
-  // Função para Comparar os Preços no Backend
   comparePrices() {
-    // Pega a lista diretamente da variável que já tem os nomes dos produtos
     const itemNames = this.shoppingList;
     if (itemNames.length === 0) return;
 
-    // Tenta acessar o GPS do celular/navegador do consumidor
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // Se o cliente aceitar dar a localização, envia com o GPS
           this.sendCompareRequest(itemNames, position.coords.latitude, position.coords.longitude);
         },
         (error) => {
-          // Se o cliente recusar, compara na mesma, mas sem calcular a distância
           console.warn('GPS recusado. A buscar sem distância.');
           this.sendCompareRequest(itemNames, null, null);
         }
@@ -327,15 +428,14 @@ export class ConsumerListComponent implements OnInit {
     }
   }
 
-  // Função auxiliar que comunica com o Backend
   sendCompareRequest(itemNames: string[], userLat: number | null, userLng: number | null) {
     this.http.post('https://mercadofacil-hrvh.onrender.com/api/compare', {
       shoppingList: itemNames,
       userLat: userLat,
-      userLng: userLng
+      userLng: userLng,
+      sortBy: this.sortBy
     }).subscribe({
       next: (results: any) => {
-        // Guarda os resultados na variável ranking que o HTML usa para mostrar na tela!
         this.ranking = results; 
       },
       error: () => alert('❌ Erro ao comparar preços.')
