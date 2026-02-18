@@ -151,8 +151,25 @@ app.post('/api/compare', async (req, res) => {
             stores[name].foundItems.push({ name: p.name, price: p.price });
         });
 
-        const ranking = Object.values(stores).sort((a,b) => (b.foundItems.length - a.foundItems.length) || (a.distance && b.distance ? a.distance - b.distance : a.totalPrice - b.totalPrice));
-        res.json(ranking.slice(0,4));
+      // O Cérebro do Ranking: Quantidade > Preço > Distância
+        const ranking = Object.values(stores).sort((a, b) => {
+            // 1º Regra: Quem tem mais produtos da lista ganha
+            if (b.foundItems.length !== a.foundItems.length) {
+                return b.foundItems.length - a.foundItems.length;
+            }
+            
+            // 2º Regra: Se empataram na quantidade, o mais BARATO ganha
+            if (a.totalPrice !== b.totalPrice) {
+                return a.totalPrice - b.totalPrice;
+            }
+            
+            // 3º Regra: Se empataram na quantidade e no preço, o mais PERTO ganha
+            if (a.distance && b.distance) {
+                return a.distance - b.distance;
+            }
+            
+            return 0; // Se tudo for exatamente igual, mantém a ordem
+        });
     } catch(e) { res.status(500).json({ error: 'Erro' }); }
 });
 

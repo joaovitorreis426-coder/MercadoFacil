@@ -139,7 +139,15 @@ import { ButtonComponent } from '../../../shared/ui/button/button.component';
                         <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Campeão</span> 
                       }
                     </h4>
-                    <p class="text-sm text-slate-500 mb-3">{{ result.foundItems.length }} produtos encontrados nesta loja</p>
+                    
+                    @if (result.distance !== null && result.distance !== undefined) {
+                      <p class="text-sm font-medium text-blue-600 mt-1 flex items-center gap-1">
+                        <lucide-icon [img]="MapPinIcon" class="w-4 h-4"></lucide-icon>
+                        A {{ result.distance }} km de você
+                      </p>
+                    }
+                    
+                    <p class="text-sm text-slate-500 mb-3 mt-1">{{ result.foundItems.length }} produtos encontrados nesta loja</p>
                     
                     <div class="space-y-2 mt-4">
                       @for (found of result.foundItems; track $index) {
@@ -268,7 +276,7 @@ export class ConsumerListComponent implements OnInit {
     return deg * (Math.PI / 180);
   }
 
-  // --- LÓGICA ANTIGA DO COMPARADOR ---
+  // --- LÓGICA DO COMPARADOR ---
 
   onType(event: any) {
     const value = event.target.value;
@@ -295,15 +303,42 @@ export class ConsumerListComponent implements OnInit {
     this.shoppingList.splice(index, 1);
   }
 
+  // Função para Comparar os Preços no Backend
   comparePrices() {
-    if (this.shoppingList.length === 0) return;
-    this.http.post<any[]>('https://mercadofacil-hrvh.onrender.com/api/compare', { shoppingList: this.shoppingList })
-      .subscribe({
-        next: (data) => {
-          this.ranking = data;
-          if (data.length === 0) alert('Nenhum produto encontrado nas lojas próximas.');
+    // Pega a lista diretamente da variável que já tem os nomes dos produtos
+    const itemNames = this.shoppingList;
+    if (itemNames.length === 0) return;
+
+    // Tenta acessar o GPS do celular/navegador do consumidor
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // Se o cliente aceitar dar a localização, envia com o GPS
+          this.sendCompareRequest(itemNames, position.coords.latitude, position.coords.longitude);
         },
-        error: () => alert('Erro ao comparar.')
-      });
+        (error) => {
+          // Se o cliente recusar, compara na mesma, mas sem calcular a distância
+          console.warn('GPS recusado. A buscar sem distância.');
+          this.sendCompareRequest(itemNames, null, null);
+        }
+      );
+    } else {
+      this.sendCompareRequest(itemNames, null, null);
+    }
+  }
+
+  // Função auxiliar que comunica com o Backend
+  sendCompareRequest(itemNames: string[], userLat: number | null, userLng: number | null) {
+    this.http.post('https://mercadofacil-hrvh.onrender.com/api/compare', {
+      shoppingList: itemNames,
+      userLat: userLat,
+      userLng: userLng
+    }).subscribe({
+      next: (results: any) => {
+        // Guarda os resultados na variável ranking que o HTML usa para mostrar na tela!
+        this.ranking = results; 
+      },
+      error: () => alert('❌ Erro ao comparar preços.')
+    });
   }
 }
