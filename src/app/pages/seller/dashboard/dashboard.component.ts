@@ -157,7 +157,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 <table class="w-full text-sm text-left">
                   <thead class="bg-gray-50 text-gray-500"><tr><th class="p-4">Produto</th><th class="p-4">Categoria</th><th class="p-4">Status</th><th class="p-4">Preço</th><th class="p-4 text-right">Ações</th></tr></thead>
                   <tbody>
-                    @for (product of filteredProducts; track product._id) {
+                    @for (product of filteredProducts; track product.id) {
                       <tr class="border-b hover:bg-gray-50">
                         <td class="p-4">
                           <div class="font-bold">{{ product.name }}</div>
@@ -170,7 +170,7 @@ import { AuthService } from '../../../core/services/auth.service';
                         <td class="p-4 font-bold text-gray-800">R$ {{ product.price }}</td>
                         <td class="p-4 text-right flex justify-end gap-2">
                           <button (click)="startEdit(product)" class="text-indigo-600"><lucide-icon [img]="PencilIcon" class="w-4 h-4"></lucide-icon></button>
-                          <button (click)="deleteProduct(product._id)" class="text-red-600"><lucide-icon [img]="Trash2Icon" class="w-4 h-4"></lucide-icon></button>
+                          <button (click)="deleteProduct(product.id)" class="text-red-600"><lucide-icon [img]="Trash2Icon" class="w-4 h-4"></lucide-icon></button>
                         </td>
                       </tr>
                     }
@@ -274,7 +274,7 @@ export class SellerDashboardComponent implements OnInit {
     this.storeName = user.storeName;
     this.storeSettings = { storeName: user.storeName, storeType: user.storeType || 'Mercado', lat: user.lat || 0, lng: user.lng || 0 };
 
-    this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/products?ownerId=${user._id}`).subscribe(data => {
+    this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/products?ownerId=${user.id}`).subscribe(data => {
       this.products = data;
       this.cdr.detectChanges();
     });
@@ -300,7 +300,7 @@ export class SellerDashboardComponent implements OnInit {
     if (!this.currentProduct.name) { alert('Nome obrigatório'); return; }
     if (!this.currentProduct.category) { alert('Categoria obrigatória'); return; }
     const user = this.authService.currentUser() as any;
-    const data = { ...this.currentProduct, ownerId: user._id };
+    const data = { ...this.currentProduct, ownerId: user.id };
 
     if (this.isEditing && this.editingId) {
       this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${this.editingId}`, data).subscribe(() => this.resetForm());
@@ -309,7 +309,7 @@ export class SellerDashboardComponent implements OnInit {
     }
   }
 
-  startEdit(p: any) { this.isEditing=true; this.editingId=p._id; this.currentProduct={...p}; this.showForm=true; }
+  startEdit(p: any) { this.isEditing=true; this.editingId=p.id; this.currentProduct={...p}; this.showForm=true; }
   deleteProduct(id: string) { if(confirm('Excluir?')) this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe(()=>this.checkUserAndFetch()); }
   resetForm() { this.showForm=false; this.currentProduct={name:'',price:'',status:'Ativo', description: '', category: ''}; this.checkUserAndFetch(); }
   openCreateForm() { this.showForm=!this.showForm; this.currentProduct={name:'',price:'',status:'Ativo', description: '', category: ''}; this.isEditing=false; }
