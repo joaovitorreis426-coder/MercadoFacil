@@ -91,23 +91,28 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: 'Erro no login' }); }
 });
 
-// Atualizar Perfil do Vendedor
+// --- ROTA DE ATUALIZAR O PERFIL DA LOJA ---
 app.put('/api/user/update-profile', async (req, res) => {
     try {
-        // Separamos exatamente o que queremos atualizar para o banco não reclamar
         const { storeName, storeType, lat, lng, email } = req.body;
         
+        // Atualiza os dados no banco
         await User.update(
             { storeName, storeType, lat, lng }, 
             { where: { email: email } }
         );
         
+        // Pega o usuário atualizado e devolve pro Frontend
         const user = await User.findOne({ where: { email: email } });
-        res.json({ success: true, user });
+        
+        if (user) {
+            res.json({ success: true, user });
+        } else {
+            res.status(404).json({ error: 'Usuário não encontrado no banco de dados' });
+        }
     } catch (e) { 
-        // Agora o servidor vai dedurar o erro exato no Render!
         console.error('🛑 ERRO AO ATUALIZAR PERFIL:', e);
-        res.status(500).json({ error: e.message || 'Erro interno ao salvar configurações' }); 
+        res.status(500).json({ error: 'Erro interno ao salvar configurações' }); 
     }
 });
 
@@ -247,6 +252,6 @@ app.post('/api/compare', async (req, res) => {
 });
     
 // Isso vai apagar o banco velho e recriar um novo, limpinho e com as regras corretas
-sequelize.sync({ force: true }).then(() => {
+sequelize.sync({ alter: true }).then(() => {
     app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`));
 });
