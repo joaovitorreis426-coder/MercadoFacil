@@ -94,7 +94,8 @@ app.put('/api/user/update-profile', async (req, res) => {
         }
     } catch (e) { 
         console.error("Erro no Perfil:", e);
-        res.status(500).json({ error: 'Erro interno ao salvar configurações' }); 
+        // 👇 Agora ele vai mandar o erro original e cru do Banco de Dados para a sua tela!
+        res.status(500).json({ error: e.message || e.toString() }); 
     }
 });
 
