@@ -11,26 +11,32 @@ export class AuthService {
 
   currentUser = signal<any>(null);
 
-  // AQUI ESTÁ O SEGREDO: A URL base agora tem o /auth no final
   private baseUrl = 'https://mercadofacil-hrvh.onrender.com/api/auth';
 
   login(credentials: any) {
     this.http.post(`${this.baseUrl}/login`, credentials).subscribe({
       next: (user: any) => {
         this.currentUser.set(user);
-        if (user.type === 'seller') this.router.navigate(['/seller/dashboard']);
-        else this.router.navigate(['/consumer']);
+        
+        // CORREÇÃO 1: Vai direto para o mapa do consumidor de forma segura
+        if (user.type === 'seller') {
+          this.router.navigate(['/seller/dashboard']);
+        } else {
+          this.router.navigate(['/consumer/map']); 
+        }
       },
       error: () => alert('Email ou senha incorretos.')
     });
   }
 
   register(userData: any) {
-    // Agora ele vai juntar o baseUrl com /register, formando o link certinho!
     this.http.post(`${this.baseUrl}/register`, userData).subscribe({
       next: (user: any) => {
         alert('✅ Conta criada com sucesso! Faça o login.');
-        this.router.navigate(['/login']);
+        
+        // CORREÇÃO 2: Como a tela de login e cadastro agora é a mesma (/auth),
+        // a forma mais segura de voltar pro Login limpando o formulário é recarregando.
+        window.location.reload(); 
       },
       error: () => alert('❌ Erro ao criar conta. Este email já pode estar em uso.')
     });
