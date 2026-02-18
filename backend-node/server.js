@@ -1,257 +1,167 @@
 const express = require('express');
-const cors = require('cors');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const { Sequelize, DataTypes, Op } = require('sequelize');
-const fs = require('fs'); // Biblioteca de arquivos do sistema
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
 
-// --- 🛑 ZONA DE LIMPEZA DE EMERGÊNCIA (SOLUÇÃO PRO RENDER) ---
-// Esse bloco verifica se o banco existe e APAGA ele antes de conectar.
-// Isso resolve o erro de "Foreign Key Constraint" travada.
-try {
-    const dbPath = './database.sqlite';
-    if (fs.existsSync(dbPath)) {
-        fs.unlinkSync(dbPath);
-        console.log('🗑️ BANCO DE DADOS TRAVADO FOI DELETADO COM SUCESSO! INICIANDO LIMPO.');
-    }
-} catch (err) {
-    console.error('Erro ao tentar limpar o banco:', err);
-}
-// -------------------------------------------------------------
-
-// --- BANCO DE DADOS ---
+// 1. Configuração do Banco de Dados
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: './database.sqlite',
     logging: false
 });
 
-// --- MODELOS ---
+// 2. MODELOS (Tabelas)
 const User = sequelize.define('User', {
-    _id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    name: DataTypes.STRING,
-    email: { type: DataTypes.STRING, unique: true },
-    password: { type: DataTypes.STRING },
-    type: { type: DataTypes.STRING },
-    storeName: DataTypes.STRING,
-    storeType: DataTypes.STRING,
-    lat: { type: DataTypes.FLOAT }, 
+    name: { type: DataTypes.STRING, allowNull: false },
+    email: { type: DataTypes.STRING, allowNull: false, unique: true },
+    password: { type: DataTypes.STRING, allowNull: false },
+    type: { type: DataTypes.STRING, defaultValue: 'consumer' },
+    storeName: { type: DataTypes.STRING },
+    storeType: { type: DataTypes.STRING },
+    lat: { type: DataTypes.FLOAT },
     lng: { type: DataTypes.FLOAT }
 });
 
 const Product = sequelize.define('Product', {
-    _id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    name: DataTypes.STRING,
-    description: DataTypes.STRING, 
-    category: DataTypes.STRING,
-    status: DataTypes.STRING,
-    price: DataTypes.STRING,
-    ownerId: DataTypes.INTEGER
+    name: { type: DataTypes.STRING, allowNull: false },
+    price: { type: DataTypes.STRING, allowNull: false },
+    category: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.STRING },
+    status: { type: DataTypes.STRING, defaultValue: 'Ativo' },
+    image: { type: DataTypes.STRING },
+    ownerId: { type: DataTypes.INTEGER }
 });
 
+const ShoppingList = sequelize.define('ShoppingList', {
+    name: { type: DataTypes.STRING },
+    category: { type: DataTypes.STRING },
+    frequency: { type: DataTypes.STRING },
+    items: { type: DataTypes.JSON },
+    ownerId: { type: DataTypes.INTEGER }
+});
+
+User.hasMany(Product, { foreignKey: 'ownerId' });
 Product.belongsTo(User, { foreignKey: 'ownerId' });
 
-// Sincroniza criando as tabelas do zero
-sequelize.sync({ force: true }).then(() => console.log('💾 Banco Novo Criado e Pronto!'));
-
-function normalizeString(str) {
-    if (!str) return "";
-    return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
-// --- ROTAS ---
-
-// 1. Registro
+// 3. ROTAS DE AUTENTICAÇÃO
 app.post('/api/auth/register', async (req, res) => {
-    try {
-        const { name, email, password, type } = req.body;
-        const existing = await User.findOne({ where: { email } });
-        if (existing) return res.status(400).json({ message: 'Email já cadastrado' });
-        
-        const newUser = await User.create({ name, email, password, type });
-        res.json({ success: true, user: newUser });
+    try { 
+        const user = await User.create(req.body); 
+        res.json(user); 
     } catch (e) { 
-        console.error(e);
-        res.status(500).json({ error: 'Erro no registro' }); 
+        console.error("Erro no Registro:", e);
+        res.status(500).json({ error: 'Erro ao criar conta' }); 
     }
 });
 
-// 2. Login
 app.post('/api/auth/login', async (req, res) => {
     try {
-        const { email, password, type } = req.body;
-        const user = await User.findOne({ where: { email, password, type } });
-        if (user) res.json({ success: true, user });
-        else res.status(401).json({ message: 'Dados incorretos' });
-    } catch (e) { res.status(500).json({ error: 'Erro no login' }); }
+        const user = await User.findOne({ where: { email: req.body.email, password: req.body.password } });
+        if (user) res.json(user); else res.status(401).json({ error: 'Dados inválidos' });
+    } catch(e) {
+        console.error("Erro no Login:", e);
+        res.status(500).json({ error: 'Erro no login' });
+    }
 });
 
-// --- ROTA DE ATUALIZAR O PERFIL DA LOJA ---
+// 4. ROTA DE ATUALIZAR PERFIL (A que estava dando erro)
 app.put('/api/user/update-profile', async (req, res) => {
     try {
-        const { storeName, storeType, lat, lng, email } = req.body;
+        const { email, storeName, storeType, lat, lng } = req.body;
         
-        // Atualiza os dados no banco
+        // Se o email não vier, barra logo de cara
+        if(!email) return res.status(400).json({error: "Email não fornecido pelo painel."});
+
+        // Atualiza a loja
         await User.update(
             { storeName, storeType, lat, lng }, 
             { where: { email: email } }
         );
         
-        // Pega o usuário atualizado e devolve pro Frontend
+        // Pega os dados atualizados
         const user = await User.findOne({ where: { email: email } });
         
-        if (user) {
+        if(user) {
             res.json({ success: true, user });
         } else {
-            res.status(404).json({ error: 'Usuário não encontrado no banco de dados' });
+            res.status(404).json({ error: 'Usuário não encontrado' });
         }
     } catch (e) { 
-        console.error('🛑 ERRO AO ATUALIZAR PERFIL:', e);
+        console.error("Erro no Perfil:", e);
         res.status(500).json({ error: 'Erro interno ao salvar configurações' }); 
     }
 });
 
-// 4. Buscar Vendedores
-app.get('/api/sellers', async (req, res) => {
-    const sellers = await User.findAll({ 
-        where: { type: 'seller', storeName: { [Op.ne]: null } },
-        attributes: ['storeName', 'storeType', 'lat', 'lng', 'email']
-    });
-    res.json(sellers);
-});
-
-// 5. Produtos CRUD
+// 5. ROTAS DE PRODUTOS
 app.get('/api/products', async (req, res) => {
-    const { ownerId } = req.query; 
-    if (ownerId && ownerId !== 'undefined') {
-        const products = await Product.findAll({ where: { ownerId: ownerId } });
-        res.json(products);
-    } else {
-        const products = await Product.findAll({ include: User });
-        res.json(products);
-    }
+    const products = await Product.findAll({ where: req.query.ownerId ? { ownerId: req.query.ownerId } : {} });
+    res.json(products);
 });
 
 app.post('/api/products', async (req, res) => {
-    try {
-        const ownerId = parseInt(req.body.ownerId); 
-        const owner = await User.findByPk(ownerId);
-        
-        // Se o dono não existe (porque o banco resetou), recria um usuário temporário ou avisa
-        if (!owner) {
-             return res.status(404).json({ error: 'Erro de sessão. Faça logout e login novamente.' });
-        }
-
-        const prod = await Product.create({ ...req.body, ownerId });
-        res.json(prod);
-    } catch (e) { 
-        console.error("Erro criar produto:", e);
-        res.status(500).json({ error: 'Erro ao criar' }); 
-    }
+    try { res.json(await Product.create(req.body)); } catch (e) { res.status(500).json({ error: 'Erro' }); }
 });
 
 app.put('/api/products/:id', async (req, res) => {
-    await Product.update(req.body, { where: { _id: req.params.id } });
+    await Product.update(req.body, { where: { id: req.params.id } });
     res.json({ success: true });
 });
 
 app.delete('/api/products/:id', async (req, res) => {
-    await Product.destroy({ where: { _id: req.params.id } });
+    await Product.destroy({ where: { id: req.params.id } });
     res.json({ success: true });
 });
 
-// 6. Busca Autocomplete
 app.get('/api/products/search', async (req, res) => {
-    try {
-        const { q } = req.query; 
-        if (!q || q.length < 2) return res.json([]);
-        
-        // Só busca produtos ATIVOS na sugestão também
-        const allProducts = await Product.findAll({ 
-            where: { status: 'Ativo' },
-            attributes: ['name'] 
-        });
-        
-        const filtered = allProducts
-            .filter(p => normalizeString(p.name).includes(normalizeString(q)))
-            .map(p => p.name);
-        res.json([...new Set(filtered)].slice(0, 10));
-    } catch (error) { res.status(500).json([]); }
+    const products = await Product.findAll({ where: { name: { [Op.like]: `%${req.query.q}%` }, status: 'Ativo' }, limit: 10 });
+    res.json([...new Set(products.map(p => p.name))]);
 });
 
-// 7. Comparar Preços (LÓGICA NOVA: Prioriza quem tem mais itens)
+// 6. ROTAS DE LISTAS DE COMPRAS
+app.get('/api/lists', async (req, res) => {
+    const lists = await ShoppingList.findAll({ where: { ownerId: req.query.ownerId } });
+    res.json(lists.map(l => { const j = l.toJSON(); j.items = typeof j.items === 'string' ? JSON.parse(j.items) : j.items; return j; }));
+});
+
+app.post('/api/lists', async (req, res) => { await ShoppingList.create({ ...req.body, items: JSON.stringify(req.body.items) }); res.json({ success: true }); });
+app.put('/api/lists/:id', async (req, res) => { await ShoppingList.update({ ...req.body, items: JSON.stringify(req.body.items) }, { where: { id: req.params.id } }); res.json({ success: true }); });
+app.delete('/api/lists/:id', async (req, res) => { await ShoppingList.destroy({ where: { id: req.params.id } }); res.json({ success: true }); });
+
+// 7. MOTOR DE COMPARAÇÃO DE PREÇOS
 app.post('/api/compare', async (req, res) => {
     try {
-        const { shoppingList } = req.body;
-        if (!shoppingList || shoppingList.length === 0) return res.json([]);
-
-        // Busca apenas produtos ATIVOS
-        const allProducts = await Product.findAll({ 
-            where: { status: 'Ativo' }, 
-            include: User 
+        const { shoppingList, userLat, userLng } = req.body;
+        const allProducts = await Product.findAll({ where: { status: 'Ativo' }, include: User });
+        const norm = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const listNorm = shoppingList.map(norm);
+        
+        const stores = {};
+        allProducts.filter(p => listNorm.some(i => norm(p.name).includes(i))).forEach(p => {
+            if(!p.User) return;
+            const name = p.User.storeName || 'Loja';
+            if(!stores[name]) stores[name] = { storeName: name, totalPrice: 0, foundItems: [], distance: (userLat && p.User.lat) ? getDistance(userLat, userLng, p.User.lat, p.User.lng) : null };
+            stores[name].totalPrice += parseFloat(p.price.replace(',','.')) || 0;
+            stores[name].foundItems.push({ name: p.name, price: p.price });
         });
 
-        const normalizedList = shoppingList.map(item => normalizeString(item));
-
-        const matchedProducts = allProducts.filter(p => {
-            const pName = normalizeString(p.name);
-            return normalizedList.some(item => pName.includes(item));
-        });
-
-        const storeGroups = {};
-
-        matchedProducts.forEach(p => {
-            const storeName = p.User ? p.User.storeName : 'Loja Desconhecida';
-            
-            if (!storeGroups[storeName]) {
-                storeGroups[storeName] = {
-                    storeName: storeName,
-                    totalPrice: 0,
-                    foundItems: []
-                };
-            }
-
-            const priceFloat = parseFloat(p.price.replace(',', '.')) || 0;
-            storeGroups[storeName].totalPrice += priceFloat;
-            storeGroups[storeName].foundItems.push({
-                name: p.name,
-                price: p.price,
-                description: p.description,
-                category: p.category
-            });
-        });
-
-        // --- A MÁGICA ACONTECE AQUI ---
-        const ranking = Object.values(storeGroups).sort((a, b) => {
-            // 1. Critério: Quantidade de Itens (Quem tem MAIS vem primeiro)
-            // Se B tem 10 e A tem 5 -> (10 - 5) é positivo, então B ganha.
-            const diferencaItens = b.foundItems.length - a.foundItems.length;
-
-            // Se a diferença não for zero, ordena por quantidade
-            if (diferencaItens !== 0) {
-                return diferencaItens;
-            }
-
-            // 2. Critério: Preço (Quem é MAIS BARATO vem primeiro)
-            // Só chega aqui se os dois tiverem a mesma quantidade de itens
-            return a.totalPrice - b.totalPrice;
-        });
-        // ------------------------------
-
-        res.json(ranking);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao comparar' });
-    }
+        const ranking = Object.values(stores).sort((a,b) => (b.foundItems.length - a.foundItems.length) || (a.distance && b.distance ? a.distance - b.distance : a.totalPrice - b.totalPrice));
+        res.json(ranking.slice(0,4));
+    } catch(e) { res.status(500).json({ error: 'Erro' }); }
 });
-    
-// Isso vai apagar o banco velho e recriar um novo, limpinho e com as regras corretas
-sequelize.sync({ alter: true }).then(() => {
-    app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`));
-});
+
+// Fórmulas de Distância GPS
+function getDistance(lat1,lon1,lat2,lon2) {
+  const R=6371, dLat=d2r(lat2-lat1), dLon=d2r(lon2-lon1); 
+  const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(d2r(lat1))*Math.cos(d2r(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2); 
+  return parseFloat((R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1));
+}
+function d2r(d) { return d*(Math.PI/180); }
+
+// Ligar o Servidor (Com alter:true para não apagar os dados sozinhos)
+sequelize.sync({ alter: true }).then(() => app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`)));
