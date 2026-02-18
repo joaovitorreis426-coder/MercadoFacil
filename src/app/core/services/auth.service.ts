@@ -12,16 +12,14 @@ export class AuthService {
   currentUser = signal<any>(null);
 
   private baseUrl = 'https://mercadofacil-hrvh.onrender.com/api/auth';
-
-  login(credentials: any) {
+login(credentials: any) {
     this.http.post(`${this.baseUrl}/login`, credentials).subscribe({
       next: (user: any) => {
-        // 👇 ISSO VAI MOSTRAR A VERDADE NO NAVEGADOR
-        console.log('DADOS VINDOS DO BANCO:', user); 
-        
         this.currentUser.set(user);
         
-        if (user.type === 'seller') {
+        // A MÁGICA AQUI: Em vez de confiar no banco (user.type), 
+        // vamos confiar no botão que você clicou na tela (credentials.type)
+        if (credentials.type === 'seller') {
           this.router.navigate(['/seller/dashboard']);
         } else {
           this.router.navigate(['/consumer/map']); 
