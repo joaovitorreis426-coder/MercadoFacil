@@ -150,7 +150,19 @@ app.post('/api/compare', async (req, res) => {
             stores[name].totalPrice += parseFloat(p.price.replace(',','.')) || 0;
             stores[name].foundItems.push({ name: p.name, price: p.price });
         });
-
+// 8. ROTA DE VENDEDORES (Para o Mapa e para os "Mercados Próximos")
+app.get('/api/sellers', async (req, res) => {
+    try {
+        const sellers = await User.findAll({ 
+            where: { type: 'seller' },
+            attributes: ['id', 'storeName', 'storeType', 'lat', 'lng']
+        });
+        res.json(sellers);
+    } catch(e) { 
+        console.error(e);
+        res.status(500).json({ error: 'Erro ao buscar vendedores' }); 
+    }
+});
       // O Cérebro do Ranking: Quantidade > Preço > Distância
         const ranking = Object.values(stores).sort((a, b) => {
             // 1º Regra: Quem tem mais produtos da lista ganha

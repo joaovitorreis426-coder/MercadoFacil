@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule, MapPin, ShoppingCart, Search, Trash2, TrendingDown, Plus, Lightbulb, Store, Save } from 'lucide-angular';
 import { ButtonComponent } from '../../../shared/ui/button/button.component';
-import { AuthService } from '../../../core/services/auth.service'; // <-- Importação do AuthService adicionada
+import { AuthService } from '../../../core/services/auth.service'; 
 
 @Component({
   selector: 'app-consumer-list',
@@ -30,6 +30,36 @@ import { AuthService } from '../../../core/services/auth.service'; // <-- Import
       </header>
 
       <main class="max-w-4xl mx-auto px-4 py-6 space-y-8">
+
+        @if (savedLists.length > 0) {
+          <section class="animate-in fade-in slide-in-from-top-4">
+            <div class="bg-gradient-to-r from-blue-50 to-slate-100 p-4 rounded-xl border border-blue-100 shadow-sm">
+              <h3 class="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+                <lucide-icon [img]="SaveIcon" class="w-4 h-4"></lucide-icon>
+                Minhas Listas Prontas
+              </h3>
+              
+              <div class="flex gap-3 overflow-x-auto pb-2">
+                @for (list of savedLists; track list.id) {
+                  <div class="bg-white border border-blue-100 rounded-lg p-3 min-w-[160px] shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div>
+                      <span class="font-bold text-slate-800 text-sm block truncate">{{ list.name }}</span>
+                      <span class="text-xs text-slate-500 mb-3 block">{{ list.items.length }} produtos</span>
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                      <button (click)="useSavedList(list)" class="flex-1 bg-blue-600 text-white font-bold text-xs py-1.5 rounded hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
+                        Usar Lista
+                      </button>
+                      <button (click)="deleteList(list.id)" class="bg-red-50 text-red-500 hover:text-white hover:bg-red-500 p-1.5 rounded border border-red-100 transition-colors">
+                        <lucide-icon [img]="TrashIcon" class="w-3 h-3"></lucide-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </section>
+        }
 
         <section>
           <h2 class="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2">
@@ -73,7 +103,7 @@ import { AuthService } from '../../../core/services/auth.service'; // <-- Import
         <section class="bg-white p-6 rounded-xl shadow-sm border border-blue-100">
           <h2 class="text-lg font-bold text-slate-700 mb-2 flex items-center gap-2">
             <lucide-icon [img]="SearchIcon" class="text-blue-500"></lucide-icon>
-            Comparar Preços
+            Nova Pesquisa de Preços
           </h2>
           <p class="text-xs text-slate-500 mb-4 flex items-center gap-1">
             <lucide-icon [img]="LightIcon" class="w-3 h-3 text-yellow-500"></lucide-icon>
@@ -119,37 +149,7 @@ import { AuthService } from '../../../core/services/auth.service'; // <-- Import
                 Salvar esta Lista
               </button>
             </div>
-          }
 
-          @if (savedLists.length > 0) {
-            <div class="mb-6 bg-slate-100 p-4 rounded-xl border border-slate-200">
-              <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                <lucide-icon [img]="CartIcon" class="w-4 h-4"></lucide-icon>
-                Minhas Listas Salvas
-              </h3>
-              
-              <div class="flex gap-3 overflow-x-auto pb-2">
-                @for (list of savedLists; track list.id) {
-                  <div class="bg-white border border-slate-200 rounded-lg p-3 min-w-[160px] shadow-sm flex flex-col justify-between">
-                    <div>
-                      <span class="font-bold text-slate-800 text-sm block truncate">{{ list.name }}</span>
-                      <span class="text-xs text-slate-500 mb-3 block">{{ list.items.length }} produtos</span>
-                    </div>
-                    <div class="flex gap-2 mt-2">
-                      <button (click)="useSavedList(list)" class="flex-1 bg-green-50 text-green-700 font-bold text-xs py-1.5 rounded hover:bg-green-100 border border-green-200 transition-colors">
-                        Usar Lista
-                      </button>
-                      <button (click)="deleteList(list.id)" class="bg-red-50 text-red-500 hover:text-red-700 hover:bg-red-100 p-1.5 rounded border border-red-100 transition-colors">
-                        <lucide-icon [img]="TrashIcon" class="w-3 h-3"></lucide-icon>
-                      </button>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-
-          @if (shoppingList.length > 0) {
             <div class="flex gap-2 mb-4 bg-slate-200 p-1.5 rounded-lg w-fit mx-auto">
               <button 
                 (click)="sortBy = 'price'; ranking.length > 0 ? comparePrices() : null" 
@@ -261,7 +261,6 @@ export class ConsumerListComponent implements OnInit {
   savedLists: any[] = [];
   sortBy: string = 'price'; 
   
-  // Variáveis para Geolocalização
   nearbySellers: any[] = [];
   loadingLocation = true;
   myLat: number | null = null;
@@ -272,7 +271,6 @@ export class ConsumerListComponent implements OnInit {
     this.loadSavedLists();
   }
 
-  // --- LÓGICA DE GEOLOCALIZAÇÃO ---
   getUserLocation() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -334,7 +332,6 @@ export class ConsumerListComponent implements OnInit {
     return deg * (Math.PI / 180);
   }
 
-  // --- LÓGICA DE LISTAS SALVAS ---
   loadSavedLists() {
     const user = this.authService.currentUser();
     if (!user) return;
@@ -372,7 +369,12 @@ export class ConsumerListComponent implements OnInit {
 
   useSavedList(list: any) {
     this.shoppingList = list.items;
-    this.comparePrices(); 
+    
+    // Rola a tela suavemente até o botão de comparar e já inicia a busca!
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      this.comparePrices(); 
+    }, 100);
   }
 
   deleteList(id: number) {
@@ -383,7 +385,6 @@ export class ConsumerListComponent implements OnInit {
     });
   }
 
-  // --- LÓGICA DO COMPARADOR ---
   onType(event: any) {
     const value = event.target.value;
     if (value.includes(',')) return;
