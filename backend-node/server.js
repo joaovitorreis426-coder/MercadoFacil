@@ -82,7 +82,7 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // 2. Login
-app.post('/api/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password, type } = req.body;
         const user = await User.findOne({ where: { email, password, type } });
@@ -264,5 +264,7 @@ app.post('/api/compare', async (req, res) => {
     }
 });
     
-
-app.listen(PORT, () => console.log(`🔥 Servidor BLINDADO rodando na porta ${PORT}`));
+// Isso vai apagar o banco velho e recriar um novo, limpinho e com as regras corretas
+sequelize.sync({ force: true }).then(() => {
+    app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`));
+});
