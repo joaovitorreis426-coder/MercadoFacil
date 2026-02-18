@@ -67,7 +67,7 @@ function normalizeString(str) {
 // --- ROTAS ---
 
 // 1. Registro
-app.post('/api/register', async (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password, type } = req.body;
         const existing = await User.findOne({ where: { email } });
