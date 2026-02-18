@@ -8,43 +8,32 @@ import { Router } from '@angular/router';
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private apiUrl = 'https://mercadofacil-hrvh.onrender.com/api'; 
 
-  currentUser = signal<{ name: string; email: string; type: string } | null>(null);
+  currentUser = signal<any>(null);
 
-  // Função de Login (Entrar)
-  login(credentials: { email: string; password: string; type: string }) {
-    this.http.post<any>(`${this.apiUrl}/login`, credentials).subscribe({
-      next: (response) => {
-        this.handleAuthSuccess(response.user);
+  // AQUI ESTÁ O SEGREDO: A URL base agora tem o /auth no final
+  private baseUrl = 'https://mercadofacil-hrvh.onrender.com/api/auth';
+
+  login(credentials: any) {
+    this.http.post(`${this.baseUrl}/login`, credentials).subscribe({
+      next: (user: any) => {
+        this.currentUser.set(user);
+        if (user.type === 'seller') this.router.navigate(['/seller/dashboard']);
+        else this.router.navigate(['/consumer']);
       },
-      error: (err) => {
-        alert('Login falhou: ' + (err.error.message || 'Erro no servidor'));
-      }
+      error: () => alert('Email ou senha incorretos.')
     });
   }
 
-  // NOVA: Função de Registro (Criar Conta)
-  register(userData: { name: string; email: string; password: string; type: string }) {
-    this.http.post<any>(`${this.apiUrl}/register`, userData).subscribe({
-      next: (response) => {
-        alert('Conta criada com sucesso! Entrando...');
-        this.handleAuthSuccess(response.user);
+  register(userData: any) {
+    // Agora ele vai juntar o baseUrl com /register, formando o link certinho!
+    this.http.post(`${this.baseUrl}/register`, userData).subscribe({
+      next: (user: any) => {
+        alert('✅ Conta criada com sucesso! Faça o login.');
+        this.router.navigate(['/login']);
       },
-      error: (err) => {
-        alert('Erro ao criar conta: ' + (err.error.message || 'Tente novamente'));
-      }
+      error: () => alert('❌ Erro ao criar conta. Este email já pode estar em uso.')
     });
-  }
-
-  // Lógica comum de sucesso (salvar estado e redirecionar)
-  private handleAuthSuccess(user: any) {
-    this.currentUser.set(user);
-    if (user.type === 'seller') {
-      this.router.navigate(['/seller/dashboard']);
-    } else {
-      this.router.navigate(['/consumer/map']);
-    }
   }
 
   logout() {
