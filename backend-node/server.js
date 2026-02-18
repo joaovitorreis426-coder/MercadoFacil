@@ -91,41 +91,23 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: 'Erro no login' }); }
 });
 
-// 3. ATUALIZAR PERFIL (COM AUTO-CURA)
+// Atualizar Perfil do Vendedor
 app.put('/api/user/update-profile', async (req, res) => {
-    const { email, storeName, storeType, lat, lng } = req.body;
-    console.log(`📡 Atualizando perfil para: ${email}`);
-
     try {
-        let user = await User.findOne({ where: { email } });
+        // Separamos exatamente o que queremos atualizar para o banco não reclamar
+        const { storeName, storeType, lat, lng, email } = req.body;
         
-        // SE NÃO EXISTIR, CRIA NA HORA (Evita erro 404)
-        if (!user) {
-            console.log('⚠️ Usuário fantasma detectado! Recriando automaticamente...');
-            user = await User.create({
-                email: email,
-                name: 'Loja Recuperada',
-                password: '123', 
-                type: 'seller',
-                storeName: storeName,
-                storeType: storeType,
-                lat: lat,
-                lng: lng
-            });
-            console.log('✅ Usuário recuperado criado!');
-            return res.json({ success: true, user });
-        }
-
-        user.storeName = storeName;
-        user.storeType = storeType;
-        if (lat) user.lat = lat;
-        if (lng) user.lng = lng;
-        await user.save();
+        await User.update(
+            { storeName, storeType, lat, lng }, 
+            { where: { email: email } }
+        );
+        
+        const user = await User.findOne({ where: { email: email } });
         res.json({ success: true, user });
-
-    } catch (error) {
-        console.error('Erro ao atualizar:', error);
-        res.status(500).json({ error: 'Erro interno' });
+    } catch (e) { 
+        // Agora o servidor vai dedurar o erro exato no Render!
+        console.error('🛑 ERRO AO ATUALIZAR PERFIL:', e);
+        res.status(500).json({ error: e.message || 'Erro interno ao salvar configurações' }); 
     }
 });
 
