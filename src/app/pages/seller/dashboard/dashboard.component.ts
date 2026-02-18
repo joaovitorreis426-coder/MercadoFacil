@@ -292,7 +292,7 @@ export class SellerDashboardComponent implements OnInit {
           this.authService.currentUser.set(res.user); 
           if(this.currentView === 'settings') this.currentView = 'overview';
         },
-        error: (err) => alert('Erro 404: Usuário não existe. Saia e crie uma conta nova!')
+        error: (err) => alert('ERRO DO SERVIDOR: ' + JSON.stringify(err.error))
       });
   }
 
