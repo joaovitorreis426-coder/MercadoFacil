@@ -16,9 +16,11 @@ export class AuthService {
   login(credentials: any) {
     this.http.post(`${this.baseUrl}/login`, credentials).subscribe({
       next: (user: any) => {
+        // 👇 ISSO VAI MOSTRAR A VERDADE NO NAVEGADOR
+        console.log('DADOS VINDOS DO BANCO:', user); 
+        
         this.currentUser.set(user);
         
-        // CORREÇÃO 1: Vai direto para o mapa do consumidor de forma segura
         if (user.type === 'seller') {
           this.router.navigate(['/seller/dashboard']);
         } else {
