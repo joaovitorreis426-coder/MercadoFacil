@@ -138,25 +138,6 @@ import { AuthService } from '../../../core/services/auth.service';
               }
             </div>
 
-            <div class="flex gap-2 mb-4 bg-slate-200 p-1.5 rounded-lg w-fit mx-auto">
-              <button 
-                (click)="sortBy = 'price'; ranking.length > 0 ? comparePrices() : null" 
-                [class.bg-white]="sortBy === 'price'"
-                [class.text-green-700]="sortBy === 'price'"
-                [class.text-slate-500]="sortBy !== 'price'"
-                class="px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
-                💰 Mais Barato
-              </button>
-              <button 
-                (click)="sortBy = 'distance'; ranking.length > 0 ? comparePrices() : null" 
-                [class.bg-white]="sortBy === 'distance'"
-                [class.text-blue-700]="sortBy === 'distance'"
-                [class.text-slate-500]="sortBy !== 'distance'"
-                class="px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
-                📍 Mais Perto
-              </button>
-            </div>
-
             <app-button (click)="comparePrices()" [disabled]="isSearching" className="w-full justify-center bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white gap-2 py-4 text-lg shadow-lg">
               <lucide-icon [img]="SearchIcon" class="w-5 h-5"></lucide-icon>
               {{ isSearching ? 'Buscando...' : 'Buscar Melhor Preço' }}
@@ -263,9 +244,7 @@ export class ConsumerListComponent implements OnInit {
   suggestions: string[] = [];
   ranking: any[] = [];
   savedLists: any[] = [];
-  sortBy: string = 'price'; 
   
-  // NOVAS VARIÁVEIS DE CONTROLE DO CARREGAMENTO
   isSearching = false;
   searchDone = false;
   
@@ -348,7 +327,7 @@ export class ConsumerListComponent implements OnInit {
 
   useSavedList(list: any) {
     this.shoppingList = list.items;
-    this.searchDone = false; // Reseta o status da busca
+    this.searchDone = false; 
     setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       this.comparePrices(); 
@@ -381,27 +360,24 @@ export class ConsumerListComponent implements OnInit {
     }
     this.newItem = '';
     this.suggestions = [];
-    this.searchDone = false; // Oculta a mensagem de erro se o usuário digitar algo novo
+    this.searchDone = false;
   }
 
   removeItem(index: number) {
     this.shoppingList.splice(index, 1);
     this.searchDone = false;
   }
-comparePrices() {
+
+  comparePrices() {
     const itemNames = this.shoppingList;
     if (itemNames.length === 0) return;
 
-    this.isSearching = true; // LIGA O LOADING
-    this.searchDone = false; // AINDA NÃO TERMINOU
-    this.ranking = [];       // LIMPA A TELA ANTERIOR
+    this.isSearching = true; 
+    this.searchDone = false; 
+    this.ranking = [];       
 
-    // A MÁGICA: Em vez de pedir o GPS de novo e travar o navegador,
-    // usamos o GPS que já pegámos e guardámos quando a página abriu!
     this.sendCompareRequest(itemNames, this.myLat, this.myLng);
 
-    // CINTO DE SEGURANÇA: Se o servidor gratuito do Render demorar mais de 60 segundos,
-    // ele desliga a rodinha e avisa-o para não ficar preso para sempre.
     setTimeout(() => {
       if (this.isSearching) {
         this.isSearching = false;
@@ -411,16 +387,16 @@ comparePrices() {
   }
 
   sendCompareRequest(itemNames: string[], userLat: number | null, userLng: number | null) {
+    // A variável sortBy foi removida, enviamos apenas o essencial para a busca padrão!
     this.http.post('https://mercadofacil-hrvh.onrender.com/api/compare', {
       shoppingList: itemNames,
       userLat: userLat,
-      userLng: userLng,
-      sortBy: this.sortBy
+      userLng: userLng
     }).subscribe({
       next: (results: any) => {
         this.ranking = results; 
-        this.isSearching = false; // DESLIGA O LOADING
-        this.searchDone = true;   // AVISA QUE A BUSCA ACABOU
+        this.isSearching = false; 
+        this.searchDone = true;   
       },
       error: () => {
         this.isSearching = false;
@@ -429,4 +405,3 @@ comparePrices() {
     });
   }
 }
-
