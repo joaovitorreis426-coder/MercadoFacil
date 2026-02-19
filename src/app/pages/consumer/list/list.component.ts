@@ -388,8 +388,7 @@ export class ConsumerListComponent implements OnInit {
     this.shoppingList.splice(index, 1);
     this.searchDone = false;
   }
-
-  comparePrices() {
+comparePrices() {
     const itemNames = this.shoppingList;
     if (itemNames.length === 0) return;
 
@@ -397,19 +396,18 @@ export class ConsumerListComponent implements OnInit {
     this.searchDone = false; // AINDA NÃO TERMINOU
     this.ranking = [];       // LIMPA A TELA ANTERIOR
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          this.sendCompareRequest(itemNames, position.coords.latitude, position.coords.longitude);
-        },
-        () => {
-          this.sendCompareRequest(itemNames, null, null);
-        },
-        { timeout: 5000, maximumAge: 10000 }
-      );
-    } else {
-      this.sendCompareRequest(itemNames, null, null);
-    }
+    // A MÁGICA: Em vez de pedir o GPS de novo e travar o navegador,
+    // usamos o GPS que já pegámos e guardámos quando a página abriu!
+    this.sendCompareRequest(itemNames, this.myLat, this.myLng);
+
+    // CINTO DE SEGURANÇA: Se o servidor gratuito do Render demorar mais de 60 segundos,
+    // ele desliga a rodinha e avisa-o para não ficar preso para sempre.
+    setTimeout(() => {
+      if (this.isSearching) {
+        this.isSearching = false;
+        alert("⚠️ O servidor demorou muito a acordar (mais de 1 minuto). Clique em Buscar novamente!");
+      }
+    }, 60000);
   }
 
   sendCompareRequest(itemNames: string[], userLat: number | null, userLng: number | null) {
@@ -431,3 +429,4 @@ export class ConsumerListComponent implements OnInit {
     });
   }
 }
+
