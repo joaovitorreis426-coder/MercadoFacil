@@ -412,19 +412,31 @@ export class ConsumerListComponent implements OnInit {
 
   comparePrices() {
     const itemNames = this.shoppingList;
-    if (itemNames.length === 0) return;
+    
+    if (itemNames.length === 0) {
+      alert("⚠️ Adicione pelo menos um produto na lista antes de buscar!");
+      return;
+    }
+
+    console.log("🔍 1. Iniciando busca pelos itens:", itemNames);
 
     if (navigator.geolocation) {
+      console.log("📍 2. Pedindo GPS ao navegador (Aguardando no máximo 5 segundos)...");
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log("✅ 3. GPS recebido com sucesso!");
           this.sendCompareRequest(itemNames, position.coords.latitude, position.coords.longitude);
         },
         (error) => {
-          console.warn('GPS recusado. A buscar sem distância.');
+          console.warn('⚠️ 3. GPS falhou ou demorou muito. Buscando sem distância. Erro:', error.message);
           this.sendCompareRequest(itemNames, null, null);
-        }
+        },
+        // 👇 O SEGREDO ESTÁ AQUI: Se demorar mais de 5 segundos, ele desiste do GPS e busca os preços!
+        { timeout: 5000, maximumAge: 10000 } 
       );
     } else {
+      console.log("❌ 2. Navegador não suporta GPS.");
       this.sendCompareRequest(itemNames, null, null);
     }
   }
