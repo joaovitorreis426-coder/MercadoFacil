@@ -73,7 +73,7 @@ app.put('/api/user/update-profile', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 4. ROTA DE VENDEDORES (O ERRO 404 ESTAVA AQUI - AGORA CORRIGIDO!)
+// 4. ROTA DE VENDEDORES (Para o mapa e lista)
 app.get('/api/sellers', async (req, res) => {
     try {
         const sellers = await User.findAll({ 
@@ -114,7 +114,7 @@ app.post('/api/lists', async (req, res) => { await ShoppingList.create({ ...req.
 app.put('/api/lists/:id', async (req, res) => { await ShoppingList.update({ ...req.body, items: JSON.stringify(req.body.items) }, { where: { id: req.params.id } }); res.json({ success: true }); });
 app.delete('/api/lists/:id', async (req, res) => { await ShoppingList.destroy({ where: { id: req.params.id } }); res.json({ success: true }); });
 
-// 7. MOTOR DE COMPARAÇÃO DE PREÇOS
+// 7. MOTOR DE COMPARAÇÃO DE PREÇOS (VERSÃO ANTIGA E DIRETA)
 function getDistance(lat1,lon1,lat2,lon2) {
     const R=6371, dLat=d2r(lat2-lat1), dLon=d2r(lon2-lon1); 
     const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(d2r(lat1))*Math.cos(d2r(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2); 
@@ -124,7 +124,7 @@ function d2r(d) { return d*(Math.PI/180); }
 
 app.post('/api/compare', async (req, res) => {
     try {
-        const { shoppingList, userLat, userLng, sortBy } = req.body;
+        const { shoppingList, userLat, userLng } = req.body;
         const allProducts = await Product.findAll({ where: { status: 'Ativo' }, include: User });
         const norm = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
         const listNorm = shoppingList.map(norm);
@@ -138,33 +138,15 @@ app.post('/api/compare', async (req, res) => {
             stores[name].foundItems.push({ name: p.name, price: p.price });
         });
 
-        const ranking = Object.values(stores).sort((a, b) => {
-            if (b.foundItems.length !== a.foundItems.length) return b.foundItems.length - a.foundItems.length;
-            if (sortBy === 'distance') {
-                if (a.distance !== null && b.distance !== null && a.distance !== b.distance) return a.distance - b.distance;
-                return a.totalPrice - b.totalPrice;
-            } else {
-                if (a.totalPrice !== b.totalPrice) return a.totalPrice - b.totalPrice;
-                if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
-            }
-            return 0;
-        });
+        // A LÓGICA ANTIGA QUE FUNCIONAVA: Quantidade -> Distância -> Preço
+        const ranking = Object.values(stores).sort((a,b) => (b.foundItems.length - a.foundItems.length) || (a.distance && b.distance ? a.distance - b.distance : a.totalPrice - b.totalPrice));
+        
         res.json(ranking.slice(0,4));
-    } catch(e) { res.status(500).json({ error: 'Erro' }); }
-});
-// 8. ROTA DE VENDEDORES (Para o Mapa e para os "Mercados Próximos")
-app.get('/api/sellers', async (req, res) => {
-    try {
-        const sellers = await User.findAll({ 
-            where: { type: 'seller' },
-            attributes: ['id', 'storeName', 'storeType', 'lat', 'lng']
-        });
-        res.json(sellers);
     } catch(e) { 
-        console.error(e);
-        res.status(500).json({ error: 'Erro ao buscar vendedores' }); 
+        // 👇 AGORA O SERVIDOR VAI GRITAR O ERRO!
+        console.error("🚨 ERRO GRAVE NO COMPARADOR:", e);
+        res.status(500).json({ error: 'Erro interno', detalhes: e.message }); 
     }
 });
-
 // Ligar o Servidor
 sequelize.sync({ alter: true }).then(() => app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`)));
