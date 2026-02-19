@@ -152,6 +152,19 @@ app.post('/api/compare', async (req, res) => {
         res.json(ranking.slice(0,4));
     } catch(e) { res.status(500).json({ error: 'Erro' }); }
 });
+// 8. ROTA DE VENDEDORES (Para o Mapa e para os "Mercados Próximos")
+app.get('/api/sellers', async (req, res) => {
+    try {
+        const sellers = await User.findAll({ 
+            where: { type: 'seller' },
+            attributes: ['id', 'storeName', 'storeType', 'lat', 'lng']
+        });
+        res.json(sellers);
+    } catch(e) { 
+        console.error(e);
+        res.status(500).json({ error: 'Erro ao buscar vendedores' }); 
+    }
+});
 
 // Ligar o Servidor
 sequelize.sync({ alter: true }).then(() => app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`)));
