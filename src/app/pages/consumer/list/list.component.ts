@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core'; // <-- 1. Adicionamos o ChangeDetectorRef aqui
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -227,6 +227,7 @@ import { AuthService } from '../../../core/services/auth.service';
 export class ConsumerListComponent implements OnInit {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef); // <-- 2. Injetamos a ferramenta para acordar a tela
 
   readonly MapIcon = MapPin;
   readonly MapPinIcon = MapPin;
@@ -269,6 +270,7 @@ export class ConsumerListComponent implements OnInit {
         () => {
           this.loadingLocation = false;
           this.fetchSellers();
+          this.cdr.detectChanges(); // Acorda a tela
         }
       );
     } else {
@@ -295,8 +297,12 @@ export class ConsumerListComponent implements OnInit {
           this.nearbySellers = sellers.slice(0, 4);
         }
         this.loadingLocation = false;
+        this.cdr.detectChanges(); // Acorda a tela
       },
-      error: () => this.loadingLocation = false
+      error: () => {
+        this.loadingLocation = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -321,7 +327,10 @@ export class ConsumerListComponent implements OnInit {
     const user = this.authService.currentUser();
     if (!user) return;
     this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/lists?ownerId=${user.id}`).subscribe({
-      next: (lists) => this.savedLists = lists
+      next: (lists) => {
+        this.savedLists = lists;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -346,7 +355,10 @@ export class ConsumerListComponent implements OnInit {
     if (value.includes(',')) return;
     if (value.length > 2) {
       this.http.get<string[]>(`https://mercadofacil-hrvh.onrender.com/api/products/search?q=${value}`)
-        .subscribe(data => this.suggestions = data);
+        .subscribe(data => {
+          this.suggestions = data;
+          this.cdr.detectChanges();
+        });
     }
   }
 
@@ -382,12 +394,12 @@ export class ConsumerListComponent implements OnInit {
       if (this.isSearching) {
         this.isSearching = false;
         alert("⚠️ O servidor demorou muito a acordar (mais de 1 minuto). Clique em Buscar novamente!");
+        this.cdr.detectChanges(); // Acorda a tela
       }
     }, 60000);
   }
 
   sendCompareRequest(itemNames: string[], userLat: number | null, userLng: number | null) {
-    // A variável sortBy foi removida, enviamos apenas o essencial para a busca padrão!
     this.http.post('https://mercadofacil-hrvh.onrender.com/api/compare', {
       shoppingList: itemNames,
       userLat: userLat,
@@ -397,9 +409,13 @@ export class ConsumerListComponent implements OnInit {
         this.ranking = results; 
         this.isSearching = false; 
         this.searchDone = true;   
+        
+        // 3. O GRANDE SEGREDO: Beliscamos a tela para ela desenhar o ranking instantaneamente!
+        this.cdr.detectChanges(); 
       },
       error: () => {
         this.isSearching = false;
+        this.cdr.detectChanges(); // Acorda a tela no erro também
         alert('❌ O Servidor falhou ou demorou muito para responder. Tente novamente.');
       }
     });
