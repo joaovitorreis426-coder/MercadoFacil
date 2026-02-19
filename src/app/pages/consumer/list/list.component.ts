@@ -442,6 +442,8 @@ export class ConsumerListComponent implements OnInit {
   }
 
   sendCompareRequest(itemNames: string[], userLat: number | null, userLng: number | null) {
+    console.log("🚀 4. Enviando para o servidor a lista:", itemNames);
+    
     this.http.post('https://mercadofacil-hrvh.onrender.com/api/compare', {
       shoppingList: itemNames,
       userLat: userLat,
@@ -449,9 +451,19 @@ export class ConsumerListComponent implements OnInit {
       sortBy: this.sortBy
     }).subscribe({
       next: (results: any) => {
+        console.log("📦 5. Resposta do servidor chegou:", results); // Vê o que o servidor mandou
+        
         this.ranking = results; 
+        
+        // Se o servidor devolver vazio, agora ele te avisa na tela!
+        if (results.length === 0) {
+          alert("⚠️ A busca funcionou, mas NENHUM mercado tem esses produtos cadastrados ou ativos no momento!");
+        }
       },
-      error: () => alert('❌ Erro ao comparar preços.')
+      error: (err) => {
+        console.error("❌ ERRO NO SERVIDOR:", err);
+        alert('❌ Erro no servidor ao comparar preços. Aperte F12 e veja a aba Console.');
+      }
     });
   }
-}
+  }
