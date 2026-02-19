@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule, MapPin, ShoppingCart, Search, Trash2, TrendingDown, Plus, Lightbulb, Store, Save } from 'lucide-angular';
 import { ButtonComponent } from '../../../shared/ui/button/button.component';
-import { AuthService } from '../../../core/services/auth.service'; 
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-consumer-list',
@@ -105,10 +105,6 @@ import { AuthService } from '../../../core/services/auth.service';
             <lucide-icon [img]="SearchIcon" class="text-blue-500"></lucide-icon>
             Nova Pesquisa de Preços
           </h2>
-          <p class="text-xs text-slate-500 mb-4 flex items-center gap-1">
-            <lucide-icon [img]="LightIcon" class="w-3 h-3 text-yellow-500"></lucide-icon>
-            Dica: Digite itens separados por vírgula (Ex: Arroz, Feijão, Óleo)
-          </p>
           
           <div class="flex gap-2 mb-4">
             <input type="text" 
@@ -116,8 +112,8 @@ import { AuthService } from '../../../core/services/auth.service';
               (input)="onType($event)"
               (keyup.enter)="addItem()" 
               list="product-suggestions"
-              placeholder="Digite o nome do produto..."
-              class="flex-1 border-2 border-blue-200 bg-slate-50 rounded-lg px-4 py-3 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-gray-400 text-gray-700 font-medium">
+              placeholder="Digite o nome do produto (ex: arroz)..."
+              class="flex-1 border-2 border-blue-200 bg-slate-50 rounded-lg px-4 py-3 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all text-gray-700 font-medium">
             
             <datalist id="product-suggestions">
               @for (suggestion of suggestions; track suggestion) {
@@ -131,10 +127,9 @@ import { AuthService } from '../../../core/services/auth.service';
           </div>
 
           @if (shoppingList.length > 0) {
-            
             <div class="flex flex-wrap gap-2 mb-4 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
               @for (item of shoppingList; track $index) {
-                <span class="bg-white border border-blue-200 text-blue-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 shadow-sm animate-in fade-in zoom-in font-medium">
+                <span class="bg-white border border-blue-200 text-blue-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 shadow-sm font-medium">
                   {{ item }}
                   <button (click)="removeItem($index)" class="text-blue-300 hover:text-red-500 transition-colors">
                     <lucide-icon [img]="TrashIcon" class="w-4 h-4"></lucide-icon>
@@ -143,18 +138,10 @@ import { AuthService } from '../../../core/services/auth.service';
               }
             </div>
 
-            <div class="flex justify-end mb-6">
-              <button (click)="saveCurrentList()" class="text-sm bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2 rounded-lg font-bold hover:bg-blue-100 transition-colors flex items-center gap-2">
-                <lucide-icon [img]="SaveIcon" class="w-4 h-4"></lucide-icon>
-                Salvar esta Lista
-              </button>
-            </div>
-
             <div class="flex gap-2 mb-4 bg-slate-200 p-1.5 rounded-lg w-fit mx-auto">
               <button 
                 (click)="sortBy = 'price'; ranking.length > 0 ? comparePrices() : null" 
                 [class.bg-white]="sortBy === 'price'"
-                [class.shadow-sm]="sortBy === 'price'"
                 [class.text-green-700]="sortBy === 'price'"
                 [class.text-slate-500]="sortBy !== 'price'"
                 class="px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
@@ -163,7 +150,6 @@ import { AuthService } from '../../../core/services/auth.service';
               <button 
                 (click)="sortBy = 'distance'; ranking.length > 0 ? comparePrices() : null" 
                 [class.bg-white]="sortBy === 'distance'"
-                [class.shadow-sm]="sortBy === 'distance'"
                 [class.text-blue-700]="sortBy === 'distance'"
                 [class.text-slate-500]="sortBy !== 'distance'"
                 class="px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2">
@@ -171,14 +157,32 @@ import { AuthService } from '../../../core/services/auth.service';
               </button>
             </div>
 
-            <app-button (click)="comparePrices()" className="w-full justify-center bg-green-600 hover:bg-green-700 text-white gap-2 py-4 text-lg shadow-lg shadow-green-100">
+            <app-button (click)="comparePrices()" [disabled]="isSearching" className="w-full justify-center bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white gap-2 py-4 text-lg shadow-lg">
               <lucide-icon [img]="SearchIcon" class="w-5 h-5"></lucide-icon>
-              Buscar Melhor Preço
+              {{ isSearching ? 'Buscando...' : 'Buscar Melhor Preço' }}
             </app-button>
           }
         </section>
 
-        @if (ranking.length > 0) {
+        @if (isSearching) {
+          <div class="mt-8 flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-blue-100">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
+            <p class="text-blue-800 font-bold text-lg">Procurando nas lojas...</p>
+            <p class="text-sm text-slate-500">Acordando o servidor, aguarde uns segundos.</p>
+          </div>
+        }
+
+        @if (!isSearching && searchDone && ranking.length === 0) {
+          <div class="mt-8 p-8 bg-yellow-50 rounded-xl border border-yellow-200 text-center shadow-sm animate-in zoom-in">
+            <h3 class="text-xl font-bold text-yellow-800 mb-2">Poxa, nenhum mercado encontrado! 😕</h3>
+            <p class="text-yellow-700">
+              Nenhum vendedor cadastrou os produtos da sua lista ainda ou eles estão com o nome diferente.<br>
+              <b>Dica:</b> Entre na conta do Vendedor, crie um produto chamado exatamente igual ao que você buscou e certifique-se de que o Status dele é "Ativo".
+            </p>
+          </div>
+        }
+
+        @if (!isSearching && ranking.length > 0) {
           <div class="space-y-4 animate-in slide-in-from-bottom-4">
             <h3 class="font-bold text-slate-700 flex items-center gap-2 text-lg">
               <lucide-icon [img]="TrendingIcon" class="text-green-600"></lucide-icon>
@@ -261,6 +265,10 @@ export class ConsumerListComponent implements OnInit {
   savedLists: any[] = [];
   sortBy: string = 'price'; 
   
+  // NOVAS VARIÁVEIS DE CONTROLE DO CARREGAMENTO
+  isSearching = false;
+  searchDone = false;
+  
   nearbySellers: any[] = [];
   loadingLocation = true;
   myLat: number | null = null;
@@ -279,8 +287,7 @@ export class ConsumerListComponent implements OnInit {
           this.myLng = position.coords.longitude;
           this.fetchSellers();
         },
-        (error) => {
-          console.error("Erro GPS:", error);
+        () => {
           this.loadingLocation = false;
           this.fetchSellers();
         }
@@ -303,7 +310,6 @@ export class ConsumerListComponent implements OnInit {
               distanceFormatted: dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`
             };
           });
-          
           this.nearbySellers.sort((a, b) => a.distance - b.distance);
           this.nearbySellers = this.nearbySellers.slice(0, 4);
         } else {
@@ -335,42 +341,14 @@ export class ConsumerListComponent implements OnInit {
   loadSavedLists() {
     const user = this.authService.currentUser();
     if (!user) return;
-    
     this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/lists?ownerId=${user.id}`).subscribe({
-      next: (lists) => this.savedLists = lists,
-      error: (err) => console.error('Erro ao carregar listas', err)
-    });
-  }
-
-  saveCurrentList() {
-    const user = this.authService.currentUser();
-    if (!user || this.shoppingList.length === 0) {
-      alert('Adicione itens na lista antes de salvar!');
-      return;
-    }
-
-    const name = prompt('Dê um nome para esta lista (ex: Compra do Mês):');
-    if (!name) return;
-
-    const payload = {
-      name: name,
-      items: this.shoppingList, 
-      ownerId: user.id
-    };
-
-    this.http.post('https://mercadofacil-hrvh.onrender.com/api/lists', payload).subscribe({
-      next: () => {
-        alert('✅ Lista salva com sucesso!');
-        this.loadSavedLists(); 
-      },
-      error: () => alert('❌ Erro ao salvar lista.')
+      next: (lists) => this.savedLists = lists
     });
   }
 
   useSavedList(list: any) {
     this.shoppingList = list.items;
-    
-    // Rola a tela suavemente até o botão de comparar e já inicia a busca!
+    this.searchDone = false; // Reseta o status da busca
     setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       this.comparePrices(); 
@@ -378,8 +356,7 @@ export class ConsumerListComponent implements OnInit {
   }
 
   deleteList(id: number) {
-    if (!confirm('Tem certeza que deseja apagar esta lista salva?')) return;
-    
+    if (!confirm('Tem certeza que deseja apagar?')) return;
     this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/lists/${id}`).subscribe({
       next: () => this.loadSavedLists()
     });
@@ -404,46 +381,38 @@ export class ConsumerListComponent implements OnInit {
     }
     this.newItem = '';
     this.suggestions = [];
+    this.searchDone = false; // Oculta a mensagem de erro se o usuário digitar algo novo
   }
 
   removeItem(index: number) {
     this.shoppingList.splice(index, 1);
+    this.searchDone = false;
   }
 
   comparePrices() {
     const itemNames = this.shoppingList;
-    
-    if (itemNames.length === 0) {
-      alert("⚠️ Adicione pelo menos um produto na lista antes de buscar!");
-      return;
-    }
+    if (itemNames.length === 0) return;
 
-    console.log("🔍 1. Iniciando busca pelos itens:", itemNames);
+    this.isSearching = true; // LIGA O LOADING
+    this.searchDone = false; // AINDA NÃO TERMINOU
+    this.ranking = [];       // LIMPA A TELA ANTERIOR
 
     if (navigator.geolocation) {
-      console.log("📍 2. Pedindo GPS ao navegador (Aguardando no máximo 5 segundos)...");
-      
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log("✅ 3. GPS recebido com sucesso!");
           this.sendCompareRequest(itemNames, position.coords.latitude, position.coords.longitude);
         },
-        (error) => {
-          console.warn('⚠️ 3. GPS falhou ou demorou muito. Buscando sem distância. Erro:', error.message);
+        () => {
           this.sendCompareRequest(itemNames, null, null);
         },
-        // 👇 O SEGREDO ESTÁ AQUI: Se demorar mais de 5 segundos, ele desiste do GPS e busca os preços!
-        { timeout: 5000, maximumAge: 10000 } 
+        { timeout: 5000, maximumAge: 10000 }
       );
     } else {
-      console.log("❌ 2. Navegador não suporta GPS.");
       this.sendCompareRequest(itemNames, null, null);
     }
   }
 
   sendCompareRequest(itemNames: string[], userLat: number | null, userLng: number | null) {
-    console.log("🚀 4. Enviando para o servidor a lista:", itemNames);
-    
     this.http.post('https://mercadofacil-hrvh.onrender.com/api/compare', {
       shoppingList: itemNames,
       userLat: userLat,
@@ -451,19 +420,14 @@ export class ConsumerListComponent implements OnInit {
       sortBy: this.sortBy
     }).subscribe({
       next: (results: any) => {
-        console.log("📦 5. Resposta do servidor chegou:", results); // Vê o que o servidor mandou
-        
         this.ranking = results; 
-        
-        // Se o servidor devolver vazio, agora ele te avisa na tela!
-        if (results.length === 0) {
-          alert("⚠️ A busca funcionou, mas NENHUM mercado tem esses produtos cadastrados ou ativos no momento!");
-        }
+        this.isSearching = false; // DESLIGA O LOADING
+        this.searchDone = true;   // AVISA QUE A BUSCA ACABOU
       },
-      error: (err) => {
-        console.error("❌ ERRO NO SERVIDOR:", err);
-        alert('❌ Erro no servidor ao comparar preços. Aperte F12 e veja a aba Console.');
+      error: () => {
+        this.isSearching = false;
+        alert('❌ O Servidor falhou ou demorou muito para responder. Tente novamente.');
       }
     });
   }
-  }
+}
