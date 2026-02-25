@@ -26,7 +26,7 @@ export const routes: Routes = [
     path: 'consumer/map', 
     // Carregamento dinâmico (Lazy Load) para o Mapa não pesar na inicialização
     loadComponent: () => import('./pages/consumer/map/map.component')
-      .then(m => m.MapComponent)
+      .then(m => m.ConsumerMapComponent)
       .catch(err => {
         console.error('Erro ao carregar mapa:', err);
         return AuthPageComponent; // Fallback de segurança
