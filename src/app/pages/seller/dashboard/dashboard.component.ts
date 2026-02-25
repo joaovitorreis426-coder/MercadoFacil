@@ -1,317 +1,205 @@
-import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { LucideAngularModule, LayoutDashboard, Package, LogOut, Plus, X, Pencil, Trash2, Settings, Store, MapPin, AlertTriangle, CheckCircle, XCircle, Filter } from 'lucide-angular';
-import { ButtonComponent } from '../../../shared/ui/button/button.component';
+import { RouterLink } from '@angular/router';
+import { LucideAngularModule, Package, Search, Edit2, Trash2, Plus, Tag, Barcode, DollarSign, Box } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
-  selector: 'app-seller-dashboard',
+  selector: 'app-seller-product-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
   template: `
-    <div class="flex h-screen bg-gray-100 font-sans">
+    <div class="min-h-screen bg-slate-50 font-sans pb-20">
       
-      <aside class="w-64 bg-slate-900 text-white hidden md:flex flex-col shadow-xl">
-        <div class="p-6 border-b border-slate-800">
-          <h1 class="text-xl font-bold flex items-center gap-2 text-indigo-400">
-            <lucide-icon [img]="StoreIcon" class="h-6 w-6"></lucide-icon>
-            Painel Loja
+      <header class="bg-white shadow-md sticky top-0 z-10 border-b border-blue-100">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <div class="bg-blue-100 p-2 rounded-lg text-blue-600">
+              <lucide-icon [img]="PackageIcon" class="w-6 h-6"></lucide-icon>
+            </div>
+            Meu Estoque
           </h1>
-          <p class="text-xs text-slate-400 mt-1 truncate">{{ storeName || 'Configure sua loja' }}</p>
+          <a routerLink="/seller/products/new" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 shadow-sm">
+            <lucide-icon [img]="PlusIcon" class="w-4 h-4"></lucide-icon> <span class="hidden sm:inline">Novo Produto</span>
+          </a>
         </div>
-        <nav class="flex-1 px-4 py-6 space-y-2">
-          <button (click)="currentView = 'overview'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors" [class.bg-indigo-600]="currentView === 'overview'">
-            <lucide-icon [img]="LayoutDashboardIcon" class="h-5 w-5"></lucide-icon> Visão Geral
-          </button>
-          <button (click)="goToProducts()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors" [class.bg-indigo-600]="currentView === 'products'">
-            <lucide-icon [img]="PackageIcon" class="h-5 w-5"></lucide-icon> Produtos
-          </button>
-          <button (click)="currentView = 'settings'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors" [class.bg-indigo-600]="currentView === 'settings'">
-            <lucide-icon [img]="SettingsIcon" class="h-5 w-5"></lucide-icon> Configurações
-            @if (!hasStoreSettings) { <span class="w-2 h-2 bg-red-500 rounded-full animate-ping ml-2"></span> }
-          </button>
-        </nav>
-        <div class="p-4 border-t border-slate-800 mt-auto">
-          <button (click)="logout()" class="flex items-center gap-3 px-4 py-2 text-red-400 hover:text-red-300 w-full">Sair</button>
+      </header>
+
+      <main class="max-w-6xl mx-auto px-4 py-8">
+        
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex gap-4 items-center">
+          <div class="relative flex-1">
+            <input type="text" 
+              [(ngModel)]="searchTerm" 
+              (input)="filterProducts()"
+              placeholder="Buscar nos meus produtos..." 
+              class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-3 outline-none focus:border-blue-500 focus:bg-white transition-colors text-slate-700 font-medium">
+            <lucide-icon [img]="SearchIcon" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></lucide-icon>
+          </div>
+          <div class="hidden sm:block text-right">
+            <span class="block text-xs font-bold text-slate-400 uppercase">Total de Itens</span>
+            <span class="text-xl font-black text-blue-600">{{ products.length }}</span>
+          </div>
         </div>
-      </aside>
 
-      <main class="flex-1 overflow-y-auto bg-gray-50">
-        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 sticky top-0 z-10">
-          <h2 class="text-lg font-semibold text-gray-800">
-            @if(!hasStoreSettings) { <span class="text-red-500 flex items-center gap-2"><lucide-icon [img]="AlertIcon" class="w-4 h-4"></lucide-icon> Configuração Pendente</span> }
-            @else { Painel do Vendedor }
-          </h2>
-          <div class="flex items-center gap-4 text-sm text-gray-500">Olá, {{ currentUserName }}</div>
-        </header>
+        @if (isLoading) {
+          <div class="flex flex-col items-center justify-center py-20">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+            <p class="text-slate-500 font-medium">A carregar o seu estoque...</p>
+          </div>
+        }
 
-        <div class="p-6 lg:p-8 space-y-8">
-
-          @if (currentView === 'overview') {
-            <div class="grid gap-6 md:grid-cols-2 animate-in fade-in">
-              <div (click)="filterBy('Ativo')" class="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md cursor-pointer transition-all group">
-                <div class="flex justify-between items-start">
-                  <div>
-                    <p class="text-gray-500 mb-1">Produtos Ativos</p>
-                    <h3 class="text-4xl font-bold text-green-600 group-hover:scale-105 transition-transform">{{ activeCount }}</h3>
-                  </div>
-                  <div class="bg-green-100 p-3 rounded-full text-green-600">
-                    <lucide-icon [img]="CheckCircleIcon" class="w-6 h-6"></lucide-icon>
-                  </div>
-                </div>
-                <p class="text-xs text-green-600 mt-4 font-medium">Clique para ver lista</p>
-              </div>
-
-              <div (click)="filterBy('Esgotado')" class="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md cursor-pointer transition-all group">
-                <div class="flex justify-between items-start">
-                  <div>
-                    <p class="text-gray-500 mb-1">Produtos Esgotados</p>
-                    <h3 class="text-4xl font-bold text-red-500 group-hover:scale-105 transition-transform">{{ esgotadoCount }}</h3>
-                  </div>
-                  <div class="bg-red-100 p-3 rounded-full text-red-500">
-                    <lucide-icon [img]="XCircleIcon" class="w-6 h-6"></lucide-icon>
-                  </div>
-                </div>
-                <p class="text-xs text-red-500 mt-4 font-medium">Clique para ver lista</p>
-              </div>
+        @if (!isLoading && filteredProducts.length === 0) {
+          <div class="bg-white p-10 rounded-2xl border border-dashed border-slate-300 text-center animate-in zoom-in duration-300">
+            <div class="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <lucide-icon [img]="PackageIcon" class="text-slate-400 w-8 h-8"></lucide-icon>
             </div>
-          }
+            <h3 class="text-xl font-bold text-slate-700 mb-2">Nenhum produto encontrado</h3>
+            <p class="text-slate-500 mb-6">Você ainda não tem produtos cadastrados ou a busca não encontrou resultados.</p>
+            <a routerLink="/seller/products/new" class="inline-block bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 font-bold px-6 py-2.5 rounded-lg transition-colors">
+              Cadastrar Meu Primeiro Produto
+            </a>
+          </div>
+        }
 
-          @if (currentView === 'products') {
-            
-            @if (!hasStoreSettings) {
-              <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg flex justify-between items-center animate-pulse">
-                <div class="flex items-center gap-3">
-                  <lucide-icon [img]="AlertIcon" class="text-red-500"></lucide-icon>
-                  <div>
-                    <h4 class="font-bold text-red-700">Ação Necessária</h4>
-                    <p class="text-sm text-red-600">Configure o <b>Nome da Loja</b> e a <b>Localização</b> para liberar os produtos.</p>
-                  </div>
-                </div>
-                <app-button (click)="currentView = 'settings'" className="bg-red-600 text-white text-sm">Ir para Configurações</app-button>
-              </div>
-            } @else {
-              <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center gap-2">
-                  @if (filterStatus) {
-                    <span class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                      Filtrando por: <b>{{ filterStatus }}</b>
-                      <button (click)="clearFilter()" class="hover:text-red-500"><lucide-icon [img]="XIcon" class="w-3 h-3"></lucide-icon></button>
+        @if (!isLoading && filteredProducts.length > 0) {
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in slide-in-from-bottom-4">
+            @for (product of filteredProducts; track product.id) {
+              <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
+                
+                <div class="p-5 border-b border-slate-50 flex-1">
+                  <div class="flex justify-between items-start mb-2">
+                    <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1">
+                      <lucide-icon [img]="TagIcon" class="w-3 h-3"></lucide-icon> {{ product.brand || 'Sem marca' }}
                     </span>
-                  }
-                </div>
-                <app-button (click)="openCreateForm()" className="bg-indigo-600 text-white gap-2">
-                  <lucide-icon [img]="showForm ? XIcon : PlusIcon" class="h-4 w-4"></lucide-icon> Novo Produto
-                </app-button>
-              </div>
-            }
-
-            @if (showForm) {
-              <div class="bg-white rounded-xl border p-6 shadow-lg mb-6 animate-in slide-in-from-top-4">
-                <h3 class="text-lg font-bold mb-4">{{ isEditing ? 'Editar' : 'Novo' }} Produto</h3>
-                <div class="grid gap-6 md:grid-cols-2">
-                  
-                  <div class="col-span-2 md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-                    <input type="text" [(ngModel)]="currentProduct.name" class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                      <lucide-icon [img]="BarcodeIcon" class="w-3 h-3"></lucide-icon> {{ product.gtin }}
+                    </span>
                   </div>
                   
-                  <div class="col-span-2 md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Preço (R$) *</label>
-                    <input type="text" [ngModel]="currentProduct.price" (ngModelChange)="applyCurrencyMask($event)" placeholder="0,00" class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
-                  </div>
-
-                  <div class="col-span-2 md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
-                    <select [(ngModel)]="currentProduct.category" class="w-full border-gray-300 rounded-lg p-2.5 bg-white outline-none focus:ring-2 focus:ring-indigo-500">
-                      <option value="" disabled selected>Selecione...</option>
-                      @for (cat of categoriesList; track cat) { <option [value]="cat">{{ cat }}</option> }
-                    </select>
-                  </div>
-
-                  <div class="col-span-2 md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select [(ngModel)]="currentProduct.status" class="w-full border-gray-300 rounded-lg p-2.5 bg-white">
-                      <option value="Ativo">Ativo</option>
-                      <option value="Esgotado">Esgotado</option>
-                    </select>
-                  </div>
-
-                  <div class="col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                    <textarea [(ngModel)]="currentProduct.description" rows="2" placeholder="Ex: Marca X, 500g..." class="w-full border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                  </div>
-
+                  <h3 class="font-bold text-slate-800 text-lg leading-tight mb-4 group-hover:text-blue-600 transition-colors">
+                    {{ product.name }}
+                  </h3>
                 </div>
-                <div class="mt-6 flex justify-end">
-                  <app-button (click)="saveProduct()" className="bg-green-600 text-white">Salvar</app-button>
+
+                <div class="bg-slate-50 p-4 grid grid-cols-2 gap-2 border-b border-slate-100">
+                  <div>
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Preço Atual</span>
+                    <span class="text-lg font-black text-green-600 flex items-center">
+                      R$ {{ product.price?.toFixed(2).replace('.', ',') || '0,00' }}
+                    </span>
+                  </div>
+                  <div class="text-right">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Em Estoque</span>
+                    <span class="text-lg font-black text-slate-700 flex items-center justify-end gap-1" [class.text-red-500]="product.stock <= 5">
+                      <lucide-icon [img]="BoxIcon" class="w-4 h-4"></lucide-icon> {{ product.stock || 0 }} un
+                    </span>
+                  </div>
                 </div>
+
+                <div class="p-3 flex gap-2 bg-white">
+                  <button (click)="editProduct(product)" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded border border-blue-100 transition-colors flex justify-center items-center gap-1">
+                    <lucide-icon [img]="Edit2Icon" class="w-3 h-3"></lucide-icon> Atualizar Preço
+                  </button>
+                  <button (click)="deleteProduct(product.id)" class="bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 px-3 py-2 rounded border border-red-100 transition-colors flex justify-center items-center">
+                    <lucide-icon [img]="Trash2Icon" class="w-4 h-4"></lucide-icon>
+                  </button>
+                </div>
+
               </div>
             }
-
-            <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
-              @if (filteredProducts.length > 0) {
-                <table class="w-full text-sm text-left">
-                  <thead class="bg-gray-50 text-gray-500"><tr><th class="p-4">Produto</th><th class="p-4">Categoria</th><th class="p-4">Status</th><th class="p-4">Preço</th><th class="p-4 text-right">Ações</th></tr></thead>
-                  <tbody>
-                    @for (product of filteredProducts; track product.id) {
-                      <tr class="border-b hover:bg-gray-50">
-                        <td class="p-4">
-                          <div class="font-bold">{{ product.name }}</div>
-                          <div class="text-xs text-gray-400">{{ product.description }}</div>
-                        </td>
-                        <td class="p-4"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">{{ product.category }}</span></td>
-                        <td class="p-4">
-                          <span class="px-2 py-1 rounded-full text-xs font-bold" [class.bg-green-100]="product.status === 'Ativo'" [class.text-green-700]="product.status === 'Ativo'" [class.bg-red-100]="product.status === 'Esgotado'" [class.text-red-700]="product.status === 'Esgotado'">{{ product.status }}</span>
-                        </td>
-                        <td class="p-4 font-bold text-gray-800">R$ {{ product.price }}</td>
-                        <td class="p-4 text-right flex justify-end gap-2">
-                          <button (click)="startEdit(product)" class="text-indigo-600"><lucide-icon [img]="PencilIcon" class="w-4 h-4"></lucide-icon></button>
-                          <button (click)="deleteProduct(product.id)" class="text-red-600"><lucide-icon [img]="Trash2Icon" class="w-4 h-4"></lucide-icon></button>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              } @else { <div class="p-8 text-center text-gray-400">Nenhum produto encontrado.</div> }
-            </div>
-          }
-
-          @if (currentView === 'settings') {
-            <div class="max-w-2xl bg-white rounded-xl shadow-sm border p-8 relative">
-              <h3 class="text-xl font-bold mb-6">Configurações da Loja</h3>
-              <div class="space-y-6">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Loja <span class="text-red-500">*</span></label>
-                  <input type="text" [(ngModel)]="storeSettings.storeName" class="w-full border-gray-300 rounded-lg p-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Ramo de Atividade</label>
-                  <select [(ngModel)]="storeSettings.storeType" class="w-full border-gray-300 rounded-lg p-3 bg-gray-50">
-                    <option value="Mercado">Mercado</option>
-                    <option value="Padaria">Padaria</option>
-                    <option value="Hortifruti">Hortifruti</option>
-                    <option value="Açougue">Açougue</option>
-                  </select>
-                </div>
-                <div class="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                  <h4 class="font-bold text-indigo-900 flex items-center gap-2">
-                    <lucide-icon [img]="MapPinIcon" class="w-4 h-4"></lucide-icon> Localização <span class="text-red-500">*</span>
-                  </h4>
-                  <div class="flex items-center gap-3 mt-2">
-                    <app-button (click)="getLocation()" className="bg-indigo-600 text-white text-xs">📍 Obter Localização Atual</app-button>
-                    @if (storeSettings.lat) { <span class="text-xs text-green-600 font-bold flex items-center gap-1"><lucide-icon [img]="CheckCircleIcon" class="w-3 h-3"></lucide-icon> Localização Salva!</span> }
-                  </div>
-                </div>
-                <div class="flex justify-end pt-4">
-                  <app-button (click)="updateStoreSettings()" className="bg-green-600 text-white shadow-lg">Salvar Alterações</app-button>
-                </div>
-              </div>
-            </div>
-          }
-        </div>
+          </div>
+        }
       </main>
     </div>
   `
 })
-export class SellerDashboardComponent implements OnInit {
-  authService = inject(AuthService);
+export class SellerProductListComponent implements OnInit {
   private http = inject(HttpClient);
-  private cdr = inject(ChangeDetectorRef);
-  private router = inject(Router);
+  private authService = inject(AuthService);
 
-  readonly LayoutDashboardIcon = LayoutDashboard; readonly StoreIcon = Store; readonly PackageIcon = Package; readonly SettingsIcon = Settings; readonly LogOutIcon = LogOut; readonly PlusIcon = Plus; readonly XIcon = X; readonly PencilIcon = Pencil; readonly Trash2Icon = Trash2; readonly MapPinIcon = MapPin; readonly AlertIcon = AlertTriangle; readonly CheckCircleIcon = CheckCircle; readonly XCircleIcon = XCircle; readonly FilterIcon = Filter;
+  readonly PackageIcon = Package;
+  readonly SearchIcon = Search;
+  readonly Edit2Icon = Edit2;
+  readonly Trash2Icon = Trash2;
+  readonly PlusIcon = Plus;
+  readonly TagIcon = Tag;
+  readonly BarcodeIcon = Barcode;
+  readonly DollarSignIcon = DollarSign;
+  readonly BoxIcon = Box;
 
-  readonly categoriesList = ['Mercearia', 'Hortifruti', 'Padaria', 'Açougue e Frios', 'Bebidas', 'Laticínios', 'Limpeza', 'Higiene Pessoal', 'Matinais', 'Enlatados', 'Biscoitos', 'Massas', 'Congelados', 'Utilidades', 'Pet Shop'];
-
-  currentView: 'overview' | 'products' | 'settings' = 'overview';
   products: any[] = [];
-  filterStatus: string | null = null;
-  currentUserName = '';
-  storeName = '';
-  showForm = false;
-  isEditing = false;
-  editingId: string | null = null;
-  
-  currentProduct = { name: '', price: '', status: 'Ativo', description: '', category: '' };
-  storeSettings = { storeName: '', storeType: 'Mercado', lat: 0, lng: 0 };
+  filteredProducts: any[] = [];
+  searchTerm = '';
+  isLoading = true;
 
-  ngOnInit() { this.checkUserAndFetch(); }
-
-  get activeCount() { return this.products.filter(p => p.status === 'Ativo').length; }
-  get esgotadoCount() { return this.products.filter(p => p.status === 'Esgotado').length; }
-  get hasStoreSettings() { return this.storeSettings.storeName && this.storeSettings.lat !== 0; }
-  get filteredProducts() { return this.filterStatus ? this.products.filter(p => p.status === this.filterStatus) : this.products; }
-
-  filterBy(status: string) { this.filterStatus = status; this.currentView = 'products'; }
-  clearFilter() { this.filterStatus = null; }
-  goToProducts() { this.currentView = 'products'; }
-
-  applyCurrencyMask(value: string) {
-    let onlyNumbers = value.replace(/\D/g, '');
-    let numberValue = (parseInt(onlyNumbers) / 100).toFixed(2);
-    if (isNaN(parseFloat(numberValue))) numberValue = "0.00";
-    this.currentProduct.price = numberValue.replace('.', ',');
+  ngOnInit() {
+    this.fetchProducts();
   }
 
-  getLocation() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        this.storeSettings.lat = position.coords.latitude;
-        this.storeSettings.lng = position.coords.longitude;
-        alert('Localização capturada!');
-      }, () => alert('Permita o acesso ao GPS no navegador!'));
-    } else alert('Sem suporte a GPS');
-  }
-
-  checkUserAndFetch() {
-    const user = this.authService.currentUser() as any;
-    if (!user) { this.router.navigate(['/auth']); return; }
-    this.currentUserName = user.name;
-    this.storeName = user.storeName;
-    this.storeSettings = { storeName: user.storeName, storeType: user.storeType || 'Mercado', lat: user.lat || 0, lng: user.lng || 0 };
-
-    this.http.get<any[]>(`https://mercadofacil-hrvh.onrender.com/api/products?ownerId=${user.id}`).subscribe(data => {
-      this.products = data;
-      this.cdr.detectChanges();
+  // 1. Busca os produtos no Backend
+  fetchProducts() {
+    const user = this.authService.currentUser();
+    // NOTA: Idealmente adicionamos ?ownerId=user.id aqui, 
+    // mas a API retorna todos os produtos para simplificar o protótipo.
+    this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/products').subscribe({
+      next: (data) => {
+        this.products = data;
+        this.filteredProducts = data;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Erro ao buscar produtos:', err);
+        this.isLoading = false;
+      }
     });
   }
 
-  updateStoreSettings() {
-    if (!this.storeSettings.storeName || !this.storeSettings.lat) { alert('Preencha Nome e Localização'); return; }
-    const user = this.authService.currentUser();
-    if (!user) return;
-    this.http.put('https://mercadofacil-hrvh.onrender.com/api/user/update-profile', { email: user.email, ...this.storeSettings })
-      .subscribe({
-        next: (res: any) => { 
-          alert('Salvo!'); 
-          this.storeName = this.storeSettings.storeName; 
-          this.authService.currentUser.set(res.user); 
-          if(this.currentView === 'settings') this.currentView = 'overview';
-        },
-        error: (err) => alert('ERRO DO SERVIDOR: ' + JSON.stringify(err.error))
-      });
+  // 2. Filtra localmente sem precisar chamar a API de novo
+  filterProducts() {
+    const term = this.searchTerm.toLowerCase();
+    this.filteredProducts = this.products.filter(p => 
+      p.name?.toLowerCase().includes(term) || 
+      p.gtin?.includes(term) || 
+      p.brand?.toLowerCase().includes(term)
+    );
   }
 
-  saveProduct() {
-    if (!this.currentProduct.name) { alert('Nome obrigatório'); return; }
-    if (!this.currentProduct.category) { alert('Categoria obrigatória'); return; }
-    const user = this.authService.currentUser() as any;
-    const data = { ...this.currentProduct, ownerId: user.id };
+  // 3. Atualiza preço (Usando um prompt rápido para facilitar)
+  editProduct(product: any) {
+    const newPrice = prompt(`Atualizar preço de ${product.name}\nPreço atual: R$ ${product.price}\n\nDigite o novo preço (ex: 15.90):`);
+    
+    if (newPrice !== null && newPrice.trim() !== '') {
+      const parsedPrice = parseFloat(newPrice.replace(',', '.'));
+      
+      if (isNaN(parsedPrice)) {
+        return alert('❌ Por favor, digite um número válido.');
+      }
 
-    if (this.isEditing && this.editingId) {
-      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${this.editingId}`, data).subscribe(() => this.resetForm());
-    } else {
-      this.http.post('https://mercadofacil-hrvh.onrender.com/api/products', data).subscribe(() => this.resetForm());
+      // Envia a atualização para o Backend
+      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${product.id}`, { price: parsedPrice }).subscribe({
+        next: () => {
+          product.price = parsedPrice; // Atualiza na tela instantaneamente
+          alert('✅ Preço atualizado com sucesso!');
+        },
+        error: () => alert('❌ Erro ao atualizar o preço.')
+      });
     }
   }
 
-  startEdit(p: any) { this.isEditing=true; this.editingId=p.id; this.currentProduct={...p}; this.showForm=true; }
-  deleteProduct(id: string) { if(confirm('Excluir?')) this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe(()=>this.checkUserAndFetch()); }
-  resetForm() { this.showForm=false; this.currentProduct={name:'',price:'',status:'Ativo', description: '', category: ''}; this.checkUserAndFetch(); }
-  openCreateForm() { this.showForm=!this.showForm; this.currentProduct={name:'',price:'',status:'Ativo', description: '', category: ''}; this.isEditing=false; }
-  logout() { this.authService.logout(); }
+  // 4. Apaga o produto
+  deleteProduct(id: number) {
+    if (confirm('⚠️ Tem certeza que deseja apagar este produto do seu estoque?')) {
+      this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe({
+        next: () => {
+          // Remove da lista na tela sem precisar recarregar a página
+          this.products = this.products.filter(p => p.id !== id);
+          this.filterProducts();
+        },
+        error: () => alert('❌ Erro ao excluir o produto.')
+      });
+    }
+  }
 }

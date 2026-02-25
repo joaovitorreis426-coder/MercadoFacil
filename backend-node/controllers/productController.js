@@ -10,8 +10,6 @@ exports.searchProducts = async (req, res) => {
 
         const data = await cosmosService.searchByName(q);
         
-        // Padronizando o retorno (limpando o excesso de dados da API)
-        // A Cosmos retorna os produtos num array
         const results = (Array.isArray(data) ? data : []).map(item => ({
             gtin: item.gtin,
             description: item.description,
@@ -28,21 +26,19 @@ exports.searchProducts = async (req, res) => {
 
 exports.createFromGtin = async (req, res) => {
     try {
-        const { gtin, price, stock } = req.body;
+        const { gtin, price, stock, ownerId } = req.body; // <-- Adicionamos ownerId
 
-        if (!gtin || price === undefined || stock === undefined) {
-            return res.status(400).json({ error: 'GTIN, preço e estoque são obrigatórios.' });
+        if (!gtin || price === undefined || stock === undefined || !ownerId) {
+            return res.status(400).json({ error: 'GTIN, preço, estoque e ID do Vendedor são obrigatórios.' });
         }
 
         const db = await getDb();
 
-        // 1. Verifica se já existe (Evita duplicados)
-        const existing = await db.get('SELECT * FROM products WHERE gtin = ?', [gtin]);
+        const existing = await db.get('SELECT * FROM Products WHERE gtin = ? AND ownerId = ?', [gtin, ownerId]);
         if (existing) {
-            return res.status(409).json({ error: 'Este produto (GTIN) já está cadastrado no seu sistema.' });
+            return res.status(409).json({ error: 'Você já cadastrou este produto (GTIN) no seu mercado.' });
         }
 
-        // 2. Busca os dados reais na Bluesoft
         let cosmosData;
         try {
             cosmosData = await cosmosService.getByGtin(gtin);
@@ -57,10 +53,11 @@ exports.createFromGtin = async (req, res) => {
         const brand = cosmosData.brand ? cosmosData.brand.name : 'Genérico';
         const ncm = cosmosData.ncm ? cosmosData.ncm.code : null;
 
-        // 3. Salva no nosso SQLite
+        // Inserindo na tabela Products (A mesma que o comparador usa)
         const result = await db.run(
-            `INSERT INTO products (gtin, name, brand, ncm, price, stock) VALUES (?, ?, ?, ?, ?, ?)`,
-            [gtin, name, brand, ncm, price, stock]
+            `INSERT INTO Products (gtin, name, brand, ncm, price, stock, category, status, ownerId, createdAt, updatedAt) 
+             VALUES (?, ?, ?, ?, ?, ?, 'Geral', 'Ativo', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [gtin, name, brand, ncm, price.toString(), stock, ownerId]
         );
 
         res.status(201).json({

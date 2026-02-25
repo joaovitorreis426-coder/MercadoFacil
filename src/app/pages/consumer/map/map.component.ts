@@ -1,103 +1,126 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { LucideAngularModule, ShoppingBag } from 'lucide-angular';
-import { AuthService } from '../../../core/services/auth.service';
-import * as L from 'leaflet';
+import { LucideAngularModule, ArrowLeft } from 'lucide-angular';
+import * as L from 'leaflet'; // Importa o motor do mapa
 
 @Component({
   selector: 'app-consumer-map',
   standalone: true,
   imports: [CommonModule, RouterLink, LucideAngularModule],
   template: `
-    <div class="h-screen flex flex-col">
-      <header class="bg-white shadow-md z-10 p-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold text-gray-800">📍 Mercado Fácil - Lojas Próximas</h1>
-        
-        <div class="flex gap-4">
-          <a routerLink="/consumer/list" class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
-            <lucide-icon [img]="ShoppingBagIcon"></lucide-icon>
-            Ver Lista de Produtos
-          </a>
-          <button (click)="logout()" class="text-red-500 font-medium">Sair</button>
-        </div>
+    <div class="flex flex-col h-screen bg-slate-50">
+      
+      <header class="bg-white shadow-sm p-4 sticky top-0 z-[1000] flex items-center gap-4">
+        <a routerLink="/consumer/list" class="p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-blue-100 hover:text-blue-600 transition-colors">
+          <lucide-icon [img]="BackIcon" class="w-5 h-5"></lucide-icon>
+        </a>
+        <h1 class="text-xl font-bold text-slate-800">Mapa de Mercados</h1>
       </header>
 
-      <div id="map" class="flex-1 w-full bg-gray-200"></div>
+      <div class="flex-1 relative">
+        @if (loading) {
+          <div class="absolute inset-0 z-[2000] bg-white/80 flex flex-col items-center justify-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
+            <p class="text-blue-800 font-bold">Buscando a sua localização...</p>
+          </div>
+        }
+        
+        <div id="map" class="w-full h-full z-0"></div>
+      </div>
+
     </div>
   `
 })
-export class MapComponent implements OnInit {
+export class ConsumerMapComponent implements OnInit {
   private http = inject(HttpClient);
-  private authService = inject(AuthService);
+  readonly BackIcon = ArrowLeft;
   
-  readonly ShoppingBagIcon = ShoppingBag;
-  
-  private map: any;
+  map: any;
+  loading = true;
+  userLat: number = -14.2350; // Posição padrão (Centro do Brasil)
+  userLng: number = -51.9253;
 
   ngOnInit() {
-    this.fixLeafletIcons(); // <--- CORREÇÃO DOS ÍCONES
     this.initMap();
-    this.loadSellers();
   }
 
-  // --- FUNÇÃO PARA CORRIGIR O ERRO DAS IMAGENS ---
-  fixLeafletIcons() {
-    const iconRetinaUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png';
-    const iconUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
-    const shadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
-
-    const DefaultIcon = L.icon({
-      iconUrl: iconUrl,
-      iconRetinaUrl: iconRetinaUrl,
-      shadowUrl: shadowUrl,
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      tooltipAnchor: [16, -28],
-      shadowSize: [41, 41]
-    });
-
-    L.Marker.prototype.options.icon = DefaultIcon;
-  }
-
+  // 1. Tenta pegar a localização do cliente
   initMap() {
-    // Inicia centrado em Santo Amaro (ou onde você preferir)
-    this.map = L.map('map').setView([-12.5472, -38.7119], 14);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          this.userLat = pos.coords.latitude;
+          this.userLng = pos.coords.longitude;
+          this.loadLeaflet(14); // Zoom mais próximo (14) porque achou o cliente
+        },
+        () => {
+          alert('GPS desativado. Mostrando visão geral do mapa.');
+          this.loadLeaflet(4); // Zoom afastado (4)
+        }
+      );
+    } else {
+      this.loadLeaflet(4);
+    }
+  }
 
+  // 2. Desenha o mapa na tela
+  loadLeaflet(zoomLevel: number) {
+    // Cria o mapa e centraliza
+    this.map = L.map('map').setView([this.userLat, this.userLng], zoomLevel);
+
+    // Carrega as imagens das ruas (OpenStreetMap - Gratuito)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(this.map);
+
+    // Cria o Pino Azul (Você)
+    const userIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+    });
+
+    // Coloca o Pino Azul no mapa
+    L.marker([this.userLat, this.userLng], { icon: userIcon })
+      .addTo(this.map)
+      .bindPopup('<b>📍 Você está aqui!</b>')
+      .openPopup();
+
+    // Chama a função para buscar os mercados
+    this.fetchSellersAndDrawPins();
   }
 
-  loadSellers() {
-    this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/sellers')
-      .subscribe(sellers => {
-        console.log('Lojas encontradas:', sellers); // Debug para ver se veio algo
+  // 3. Busca os mercados no Backend e espalha os pinos
+  fetchSellersAndDrawPins() {
+    this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/sellers').subscribe({
+      next: (sellers) => {
+        
+        // Cria o Pino Verde (Mercados)
+        const storeIcon = L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+          iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+
+        // Espalha os mercados pelo mapa
         sellers.forEach(seller => {
           if (seller.lat && seller.lng) {
-            this.addMarker(seller);
+            L.marker([seller.lat, seller.lng], { icon: storeIcon })
+              .addTo(this.map)
+              .bindPopup(`
+                <div class="text-center">
+                  <b class="text-blue-700 text-lg">${seller.storeName || 'Mercado'}</b><br>
+                  <span class="text-gray-500 text-sm">${seller.storeType || 'Loja'}</span>
+                </div>
+              `);
           }
         });
-      });
-  }
-
-  addMarker(seller: any) {
-    const marker = L.marker([seller.lat, seller.lng]).addTo(this.map);
-
-    const popupContent = `
-      <div class="p-2 min-w-[200px]">
-        <h3 class="font-bold text-lg text-indigo-700">${seller.storeName}</h3>
-        <span class="text-xs bg-gray-200 px-2 py-1 rounded font-semibold">${seller.storeType}</span>
-        <p class="text-sm mt-3 text-gray-600">Confira os preços na lista!</p>
-      </div>
-    `;
-
-    marker.bindPopup(popupContent);
-  }
-
-  logout() {
-    this.authService.logout();
+        
+        this.loading = false; // Esconde a tela de carregamento
+      },
+      error: () => this.loading = false
+    });
   }
 }
