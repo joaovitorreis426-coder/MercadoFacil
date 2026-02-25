@@ -7,7 +7,7 @@ import { LucideAngularModule, Package, Search, Edit2, Trash2, Plus, Tag, Barcode
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
-  selector: 'app-seller-product-list',
+  selector: 'app-seller-dashboard', // <-- Ajustei o seletor também para ficar padrão
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
   template: `
@@ -116,7 +116,8 @@ import { AuthService } from '../../../core/services/auth.service';
     </div>
   `
 })
-export class SellerProductListComponent implements OnInit {
+// 👇 AQUI ESTÁ A CORREÇÃO MÁGICA PARA A VERCEL FUNCIONAR!
+export class SellerDashboardComponent implements OnInit {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
 
@@ -139,15 +140,13 @@ export class SellerProductListComponent implements OnInit {
     this.fetchProducts();
   }
 
-  // 1. Busca os produtos no Backend
   fetchProducts() {
     const user = this.authService.currentUser();
-    // NOTA: Idealmente adicionamos ?ownerId=user.id aqui, 
-    // mas a API retorna todos os produtos para simplificar o protótipo.
-    this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/products').subscribe({
+    this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/products/all').subscribe({
       next: (data) => {
-        this.products = data;
-        this.filteredProducts = data;
+        // Mostra só os produtos deste vendedor
+        this.products = user ? data.filter(p => p.ownerId === user.id) : data;
+        this.filteredProducts = [...this.products];
         this.isLoading = false;
       },
       error: (err) => {
@@ -157,7 +156,6 @@ export class SellerProductListComponent implements OnInit {
     });
   }
 
-  // 2. Filtra localmente sem precisar chamar a API de novo
   filterProducts() {
     const term = this.searchTerm.toLowerCase();
     this.filteredProducts = this.products.filter(p => 
@@ -167,7 +165,6 @@ export class SellerProductListComponent implements OnInit {
     );
   }
 
-  // 3. Atualiza preço (Usando um prompt rápido para facilitar)
   editProduct(product: any) {
     const newPrice = prompt(`Atualizar preço de ${product.name}\nPreço atual: R$ ${product.price}\n\nDigite o novo preço (ex: 15.90):`);
     
@@ -178,10 +175,9 @@ export class SellerProductListComponent implements OnInit {
         return alert('❌ Por favor, digite um número válido.');
       }
 
-      // Envia a atualização para o Backend
       this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${product.id}`, { price: parsedPrice }).subscribe({
         next: () => {
-          product.price = parsedPrice; // Atualiza na tela instantaneamente
+          product.price = parsedPrice;
           alert('✅ Preço atualizado com sucesso!');
         },
         error: () => alert('❌ Erro ao atualizar o preço.')
@@ -189,12 +185,10 @@ export class SellerProductListComponent implements OnInit {
     }
   }
 
-  // 4. Apaga o produto
   deleteProduct(id: number) {
     if (confirm('⚠️ Tem certeza que deseja apagar este produto do seu estoque?')) {
       this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe({
         next: () => {
-          // Remove da lista na tela sem precisar recarregar a página
           this.products = this.products.filter(p => p.id !== id);
           this.filterProducts();
         },
