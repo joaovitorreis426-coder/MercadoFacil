@@ -2,19 +2,27 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Search, Package, DollarSign, CheckCircle, Tag } from 'lucide-angular';
+import { Router, RouterLink } from '@angular/router';
+import { LucideAngularModule, Search, Package, DollarSign, CheckCircle, Tag, ArrowLeft } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-seller-product-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink],
   template: `
     <div class="min-h-screen bg-slate-50 font-sans pb-20 pt-8 px-4">
       <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-blue-100 p-6 sm:p-8">
         
+        <div class="flex items-center gap-4 mb-6 pb-4 border-b border-slate-100">
+          <a routerLink="/seller/dashboard" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors">
+            <lucide-icon [img]="ArrowLeftIcon" class="w-5 h-5"></lucide-icon>
+          </a>
+          <h1 class="text-xl font-bold text-slate-800">Adicionar Novo Produto</h1>
+        </div>
+
         <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <lucide-icon [img]="SearchIcon" class="w-4 h-4"></lucide-icon> Busque no catálogo global
+          <lucide-icon [img]="SearchIcon" class="w-4 h-4"></lucide-icon> 1. Busque no catálogo global
         </h2>
         
         <div class="relative mb-8">
@@ -63,8 +71,9 @@ import { AuthService } from '../../../core/services/auth.service';
 export class SellerProductCreateComponent {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private router = inject(Router);
 
-  readonly SearchIcon = Search; readonly PackageIcon = Package; readonly DollarIcon = DollarSign; readonly CheckCircleIcon = CheckCircle; readonly TagIcon = Tag;
+  readonly SearchIcon = Search; readonly PackageIcon = Package; readonly DollarIcon = DollarSign; readonly CheckCircleIcon = CheckCircle; readonly TagIcon = Tag; readonly ArrowLeftIcon = ArrowLeft;
 
   searchQuery = ''; cosmosResults: any[] = []; isSearching = false; isSaving = false;
   selectedProduct: any = null; productPrice: number | null = null; productStock: number | null = null;
@@ -91,10 +100,12 @@ export class SellerProductCreateComponent {
 
     this.http.post('https://mercadofacil-hrvh.onrender.com/api/products/create-from-gtin', payload)
       .subscribe({
-        next: (res: any) => { alert('✅ ' + res.message); this.isSaving = false; this.resetForm(); },
+        next: (res: any) => { 
+          alert('✅ ' + res.message); 
+          this.isSaving = false; 
+          this.router.navigate(['/seller/dashboard']); // Volta para o Dashboard automaticamente!
+        },
         error: (err) => { alert('❌ Erro: ' + err.error.error); this.isSaving = false; }
       });
   }
-
-  resetForm() { this.searchQuery = ''; this.selectedProduct = null; this.productPrice = null; this.productStock = null; this.cosmosResults = []; }
 }

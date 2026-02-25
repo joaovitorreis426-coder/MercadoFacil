@@ -3,11 +3,11 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { LucideAngularModule, Package, Search, Edit2, Trash2, Plus, Tag, Barcode, DollarSign, Box } from 'lucide-angular';
+import { LucideAngularModule, Package, Search, Edit2, Trash2, Plus, Tag, Barcode, Box } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
-  selector: 'app-seller-dashboard', // <-- Ajustei o seletor também para ficar padrão
+  selector: 'app-seller-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
   template: `
@@ -31,11 +31,7 @@ import { AuthService } from '../../../core/services/auth.service';
         
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex gap-4 items-center">
           <div class="relative flex-1">
-            <input type="text" 
-              [(ngModel)]="searchTerm" 
-              (input)="filterProducts()"
-              placeholder="Buscar nos meus produtos..." 
-              class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-3 outline-none focus:border-blue-500 focus:bg-white transition-colors text-slate-700 font-medium">
+            <input type="text" [(ngModel)]="searchTerm" (input)="filterProducts()" placeholder="Buscar nos meus produtos..." class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-3 outline-none focus:border-blue-500 focus:bg-white transition-colors text-slate-700 font-medium">
             <lucide-icon [img]="SearchIcon" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></lucide-icon>
           </div>
           <div class="hidden sm:block text-right">
@@ -57,7 +53,7 @@ import { AuthService } from '../../../core/services/auth.service';
               <lucide-icon [img]="PackageIcon" class="text-slate-400 w-8 h-8"></lucide-icon>
             </div>
             <h3 class="text-xl font-bold text-slate-700 mb-2">Nenhum produto encontrado</h3>
-            <p class="text-slate-500 mb-6">Você ainda não tem produtos cadastrados ou a busca não encontrou resultados.</p>
+            <p class="text-slate-500 mb-6">Você ainda não tem produtos ou a busca não encontrou nada.</p>
             <a routerLink="/seller/products/new" class="inline-block bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 font-bold px-6 py-2.5 rounded-lg transition-colors">
               Cadastrar Meu Primeiro Produto
             </a>
@@ -68,33 +64,25 @@ import { AuthService } from '../../../core/services/auth.service';
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in slide-in-from-bottom-4">
             @for (product of filteredProducts; track product.id) {
               <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
-                
                 <div class="p-5 border-b border-slate-50 flex-1">
                   <div class="flex justify-between items-start mb-2">
                     <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1">
-                      <lucide-icon [img]="TagIcon" class="w-3 h-3"></lucide-icon> {{ product.brand || 'Sem marca' }}
+                      <lucide-icon [img]="TagIcon" class="w-3 h-3"></lucide-icon> {{ product.brand || 'Genérico' }}
                     </span>
-                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                      <lucide-icon [img]="BarcodeIcon" class="w-3 h-3"></lucide-icon> {{ product.gtin }}
-                    </span>
+                    <span class="text-[10px] text-slate-400 font-mono">GTIN: {{ product.gtin || 'N/A' }}</span>
                   </div>
-                  
-                  <h3 class="font-bold text-slate-800 text-lg leading-tight mb-4 group-hover:text-blue-600 transition-colors">
-                    {{ product.name }}
-                  </h3>
+                  <h3 class="font-bold text-slate-800 text-lg leading-tight mb-4 group-hover:text-blue-600">{{ product.name }}</h3>
                 </div>
 
                 <div class="bg-slate-50 p-4 grid grid-cols-2 gap-2 border-b border-slate-100">
                   <div>
-                    <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Preço Atual</span>
-                    <span class="text-lg font-black text-green-600 flex items-center">
-                      R$ {{ product.price?.toFixed(2).replace('.', ',') || '0,00' }}
-                    </span>
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Preço</span>
+                    <span class="text-lg font-black text-green-600">R$ {{ product.price?.replace('.', ',') || '0,00' }}</span>
                   </div>
                   <div class="text-right">
-                    <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Em Estoque</span>
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Estoque</span>
                     <span class="text-lg font-black text-slate-700 flex items-center justify-end gap-1" [class.text-red-500]="product.stock <= 5">
-                      <lucide-icon [img]="BoxIcon" class="w-4 h-4"></lucide-icon> {{ product.stock || 0 }} un
+                      <lucide-icon [img]="BoxIcon" class="w-4 h-4"></lucide-icon> {{ product.stock || 0 }}
                     </span>
                   </div>
                 </div>
@@ -107,7 +95,6 @@ import { AuthService } from '../../../core/services/auth.service';
                     <lucide-icon [img]="Trash2Icon" class="w-4 h-4"></lucide-icon>
                   </button>
                 </div>
-
               </div>
             }
           </div>
@@ -116,82 +103,50 @@ import { AuthService } from '../../../core/services/auth.service';
     </div>
   `
 })
-// 👇 AQUI ESTÁ A CORREÇÃO MÁGICA PARA A VERCEL FUNCIONAR!
 export class SellerDashboardComponent implements OnInit {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
 
-  readonly PackageIcon = Package;
-  readonly SearchIcon = Search;
-  readonly Edit2Icon = Edit2;
-  readonly Trash2Icon = Trash2;
-  readonly PlusIcon = Plus;
-  readonly TagIcon = Tag;
-  readonly BarcodeIcon = Barcode;
-  readonly DollarSignIcon = DollarSign;
-  readonly BoxIcon = Box;
+  readonly PackageIcon = Package; readonly SearchIcon = Search; readonly Edit2Icon = Edit2; readonly Trash2Icon = Trash2; readonly PlusIcon = Plus; readonly TagIcon = Tag; readonly BarcodeIcon = Barcode; readonly BoxIcon = Box;
 
-  products: any[] = [];
-  filteredProducts: any[] = [];
-  searchTerm = '';
-  isLoading = true;
+  products: any[] = []; filteredProducts: any[] = []; searchTerm = ''; isLoading = true;
 
-  ngOnInit() {
-    this.fetchProducts();
-  }
+  ngOnInit() { this.fetchProducts(); }
 
   fetchProducts() {
     const user = this.authService.currentUser();
     this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/products/all').subscribe({
       next: (data) => {
-        // Mostra só os produtos deste vendedor
         this.products = user ? data.filter(p => p.ownerId === user.id) : data;
         this.filteredProducts = [...this.products];
         this.isLoading = false;
       },
-      error: (err) => {
-        console.error('Erro ao buscar produtos:', err);
-        this.isLoading = false;
-      }
+      error: () => this.isLoading = false
     });
   }
 
   filterProducts() {
     const term = this.searchTerm.toLowerCase();
-    this.filteredProducts = this.products.filter(p => 
-      p.name?.toLowerCase().includes(term) || 
-      p.gtin?.includes(term) || 
-      p.brand?.toLowerCase().includes(term)
-    );
+    this.filteredProducts = this.products.filter(p => p.name?.toLowerCase().includes(term) || p.gtin?.includes(term) || p.brand?.toLowerCase().includes(term));
   }
 
   editProduct(product: any) {
     const newPrice = prompt(`Atualizar preço de ${product.name}\nPreço atual: R$ ${product.price}\n\nDigite o novo preço (ex: 15.90):`);
-    
     if (newPrice !== null && newPrice.trim() !== '') {
       const parsedPrice = parseFloat(newPrice.replace(',', '.'));
-      
-      if (isNaN(parsedPrice)) {
-        return alert('❌ Por favor, digite um número válido.');
-      }
+      if (isNaN(parsedPrice)) return alert('❌ Por favor, digite um número válido.');
 
-      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${product.id}`, { price: parsedPrice }).subscribe({
-        next: () => {
-          product.price = parsedPrice;
-          alert('✅ Preço atualizado com sucesso!');
-        },
+      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${product.id}`, { price: parsedPrice.toString() }).subscribe({
+        next: () => { product.price = parsedPrice.toString(); alert('✅ Preço atualizado!'); },
         error: () => alert('❌ Erro ao atualizar o preço.')
       });
     }
   }
 
   deleteProduct(id: number) {
-    if (confirm('⚠️ Tem certeza que deseja apagar este produto do seu estoque?')) {
+    if (confirm('⚠️ Deseja apagar este produto do seu estoque?')) {
       this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe({
-        next: () => {
-          this.products = this.products.filter(p => p.id !== id);
-          this.filterProducts();
-        },
+        next: () => { this.products = this.products.filter(p => p.id !== id); this.filterProducts(); },
         error: () => alert('❌ Erro ao excluir o produto.')
       });
     }

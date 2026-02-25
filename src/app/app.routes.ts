@@ -1,36 +1,34 @@
 import { Routes } from '@angular/router';
-
-// 1. Importação da nova Landing Page
-import { LandingPageComponent } from './pages/landing/landing.component';
-
-// Importação das outras páginas existentes
-import { AuthPageComponent } from './pages/auth/auth.component';
-import { SellerDashboardComponent } from './pages/seller/dashboard/dashboard.component';
-import { StoreSetupComponent } from './pages/seller/store-setup/store-setup.component';
-import { ConsumerListComponent } from './pages/consumer/list/list.component';
+// Importação dos seus cadeados de segurança!
+import { sellerGuard, consumerGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  // --- ROTA INICIAL (A MELHORIA) ---
-  // Quando acessar http://localhost:4200/, abre a capa do site (Landing Page)
-  { path: '', component: LandingPageComponent }, 
+  // Rotas Públicas
+  { path: 'login', loadComponent: () => import('./pages/auth/auth.component').then(m => m.AuthPageComponent) },
+  { path: 'register', loadComponent: () => import('./pages/auth/register/register.component').then(m => m.RegisterComponent) },
   
-  // --- AUTENTICAÇÃO ---
-  { path: 'auth', component: AuthPageComponent },
-  
-  // --- VENDEDOR ---
-  { path: 'seller/dashboard', component: SellerDashboardComponent },
-  { path: 'seller/setup', component: StoreSetupComponent },
-
-  // --- CONSUMIDOR ---
+  // 🔒 Rotas do Consumidor (Protegidas)
   { 
-    path: 'consumer/map', 
-    // Carregamento dinâmico (Lazy Load) para o Mapa não pesar na inicialização
-    loadComponent: () => import('./pages/consumer/map/map.component')
-      .then(m => m.ConsumerMapComponent)
-      .catch(err => {
-        console.error('Erro ao carregar mapa:', err);
-        return AuthPageComponent; // Fallback de segurança
-      }) 
+    path: 'consumer',
+    canActivate: [consumerGuard],
+    children: [
+      { path: 'list', loadComponent: () => import('./pages/consumer/list/list.component').then(m => m.ConsumerListComponent) },
+      // ATENÇÃO: Se der erro no mapa abaixo, mude m.ConsumerMapComponent para m.MapComponent
+      { path: 'map', loadComponent: () => import('./pages/consumer/map/map.component').then(m => m.ConsumerMapComponent) } 
+    ]
   },
-  { path: 'consumer/list', component: ConsumerListComponent }
+
+  // 🔒 Rotas do Vendedor (Protegidas)
+  { 
+    path: 'seller',
+    canActivate: [sellerGuard],
+    children: [
+      { path: 'dashboard', loadComponent: () => import('./pages/seller/dashboard/dashboard.component').then(m => m.SellerDashboardComponent) },
+      { path: 'products/new', loadComponent: () => import('./pages/seller/product-create/product-create.component').then(m => m.SellerProductCreateComponent) },
+      { path: 'setup', loadComponent: () => import('./pages/seller/store-setup/store-setup.component').then(m => m.StoreSetupComponent) }
+    ]
+  },
+
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '**', redirectTo: 'login' }
 ];
