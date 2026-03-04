@@ -9,7 +9,10 @@ export const routes: Routes = [
   
   // 🔒 Rotas do Consumidor (Protegidas)
   { 
-    path: 'consumer',
+  path: 'ranking', 
+  loadComponent: () => import('./pages/consumer/list-ranking/list-ranking.component').then(m => m.ListRankingComponent) 
+},
+ {     path: 'consumer',
     canActivate: [consumerGuard],
     children: [
       { path: 'list', loadComponent: () => import('./pages/consumer/list/list.component').then(m => m.ConsumerListComponent) },
