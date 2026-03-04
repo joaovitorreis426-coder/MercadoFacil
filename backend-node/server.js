@@ -15,6 +15,47 @@ app.use(bodyParser.json());
 // 1. INICIALIZAÇÃO DO BANCO DE DADOS (SQLite)
 // ==========================================
 db.serialize(() => {
+   
+   // --- DENTRO DO db.serialize ---
+db.run(`CREATE TABLE IF NOT EXISTS saved_lists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER,
+    listName TEXT,
+    products JSON, -- Guardaremos os GTINs como uma string JSON
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(userId) REFERENCES users(id)
+)`);
+
+// --- NOVAS ROTAS PARA LISTAS SALVAS ---
+
+// 1. Salvar uma lista nova
+app.post('/api/consumer/lists', (req, res) => {
+    const { userId, listName, products } = req.body; // products deve ser um array de GTINs
+    const sql = `INSERT INTO saved_lists (userId, listName, products) VALUES (?, ?, ?)`;
+    db.run(sql, [userId, listName, JSON.stringify(products)], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID, message: "Lista salva com sucesso!" });
+    });
+});
+
+// 2. Buscar todas as listas de um usuário
+app.get('/api/consumer/lists/:userId', (req, res) => {
+    const { userId } = req.params;
+    db.all(`SELECT * FROM saved_lists WHERE userId = ? ORDER BY createdAt DESC`, [userId], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        // Converte a string JSON de volta para Array antes de enviar
+        const lists = rows.map(row => ({ ...row, products: JSON.parse(row.products) }));
+        res.json(lists);
+    });
+});
+
+// 3. Deletar uma lista
+app.delete('/api/consumer/lists/:id', (req, res) => {
+    db.run(`DELETE FROM saved_lists WHERE id = ?`, [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Lista removida!" });
+    });
+});
     // Criar tabela de usuários se não existir
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
