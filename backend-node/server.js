@@ -137,23 +137,43 @@ app.get('/api/products/search', async (req, res) => {
 
 app.post('/api/products/create-from-gtin', async (req, res) => {
     const { gtin, price, stock, ownerId } = req.body;
-    
+
+    console.log(`🚀 Tentando cadastrar produto. GTIN: ${gtin}, Usuário: ${ownerId}`);
+
+    if (!ownerId) {
+        return res.status(400).json({ error: "ID do dono do produto não fornecido." });
+    }
+
     try {
+        // Chamada para a Bluesoft
         const response = await axios.get(`https://api.cosmos.bluesoft.com.br/gtins/${gtin}.json`, {
-            headers: { 'X-Cosmos-Token': process.env.COSMOS_TOKEN }
+            headers: { 
+                'X-Cosmos-Token': process.env.COSMOS_TOKEN,
+                'User-Agent': 'Cosmos-API-Request'
+            }
         });
 
         const p = response.data;
         const sql = `INSERT INTO products (name, brand, gtin, price, stock, ownerId) VALUES (?, ?, ?, ?, ?, ?)`;
         
-        db.run(sql, [p.description, p.brand ? p.brand.name : 'Genérico', gtin, price, stock, ownerId], (err) => {
-            if (err) return res.status(500).json({ error: "Erro ao salvar no banco" });
+        db.run(sql, [p.description, p.brand ? p.brand.name : 'Genérico', gtin, price, stock, ownerId], function(err) {
+            if (err) {
+                console.error("❌ Erro no SQLITE:", err.message);
+                return res.status(500).json({ error: "Erro ao salvar no banco local." });
+            }
+            console.log("✅ Produto salvo com sucesso no banco!");
             res.json({ message: "Produto adicionado!" });
         });
 
     } catch (error) {
-        console.error("ERRO NO BACKEND:", error.response?.status, error.message);
-        res.status(500).json({ error: "Token inválido ou GTIN não encontrado" });
+        console.error("❌ ERRO NA CHAMADA BLUESOFT:");
+        if (error.response) {
+            console.error("Status:", error.response.status); // 401 = Token Errado, 429 = Limite Excedido
+            console.error("Data:", error.response.data);
+        } else {
+            console.error("Mensagem:", error.message);
+        }
+        res.status(500).json({ error: "Não foi possível validar o GTIN na Bluesoft. Verifique o Token no Render." });
     }
 });
 
