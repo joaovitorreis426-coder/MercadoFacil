@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-// Importação dos seus cadeados de segurança!
 import { sellerGuard, consumerGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
@@ -9,15 +8,16 @@ export const routes: Routes = [
   
   // 🔒 Rotas do Consumidor (Protegidas)
   { 
-  path: 'ranking', 
-  loadComponent: () => import('./pages/consumer/list-ranking/list-ranking.component').then(m => m.ListRankingComponent) 
-},
- {     path: 'consumer',
-    canActivate: [consumerGuard],
+    path: 'consumer',
+    canActivate: [consumerGuard], // Isso garante que só consumidor entra
     children: [
       { path: 'list', loadComponent: () => import('./pages/consumer/list/list.component').then(m => m.ConsumerListComponent) },
-      // ATENÇÃO: Se der erro no mapa abaixo, mude m.ConsumerMapComponent para m.MapComponent
-      { path: 'map', loadComponent: () => import('./pages/consumer/map/map.component').then(m => m.ConsumerMapComponent) } 
+      { path: 'map', loadComponent: () => import('./pages/consumer/map/map.component').then(m => m.ConsumerMapComponent) },
+      // 👇 MOVI PARA CÁ! Agora o caminho real é /consumer/ranking
+      { 
+        path: 'ranking', 
+        loadComponent: () => import('./pages/consumer/list-ranking/list-ranking.component').then(m => m.ListRankingComponent) 
+      }
     ]
   },
 
