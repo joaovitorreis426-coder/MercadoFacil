@@ -15,48 +15,17 @@ app.use(bodyParser.json());
 // 1. INICIALIZAÇÃO DO BANCO DE DADOS (SQLite)
 // ==========================================
 db.serialize(() => {
-   
-   // --- DENTRO DO db.serialize ---
-db.run(`CREATE TABLE IF NOT EXISTS saved_lists (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId INTEGER,
-    listName TEXT,
-    products JSON, -- Guardaremos os GTINs como uma string JSON
-    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(userId) REFERENCES users(id)
-)`);
+    // Tabela de Listas Salvas
+    db.run(`CREATE TABLE IF NOT EXISTS saved_lists (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER,
+        listName TEXT,
+        products JSON,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(userId) REFERENCES users(id)
+    )`);
 
-// --- NOVAS ROTAS PARA LISTAS SALVAS ---
-
-// 1. Salvar uma lista nova
-app.post('/api/consumer/lists', (req, res) => {
-    const { userId, listName, products } = req.body; // products deve ser um array de GTINs
-    const sql = `INSERT INTO saved_lists (userId, listName, products) VALUES (?, ?, ?)`;
-    db.run(sql, [userId, listName, JSON.stringify(products)], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID, message: "Lista salva com sucesso!" });
-    });
-});
-
-// 2. Buscar todas as listas de um usuário
-app.get('/api/consumer/lists/:userId', (req, res) => {
-    const { userId } = req.params;
-    db.all(`SELECT * FROM saved_lists WHERE userId = ? ORDER BY createdAt DESC`, [userId], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        // Converte a string JSON de volta para Array antes de enviar
-        const lists = rows.map(row => ({ ...row, products: JSON.parse(row.products) }));
-        res.json(lists);
-    });
-});
-
-// 3. Deletar uma lista
-app.delete('/api/consumer/lists/:id', (req, res) => {
-    db.run(`DELETE FROM saved_lists WHERE id = ?`, [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Lista removida!" });
-    });
-});
-    // Criar tabela de usuários se não existir
+    // Tabela de Usuários
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
@@ -68,7 +37,7 @@ app.delete('/api/consumer/lists/:id', (req, res) => {
         longitude REAL
     )`);
 
-    // Criar tabela de produtos se não existir
+    // Tabela de Produtos
     db.run(`CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
@@ -80,7 +49,7 @@ app.delete('/api/consumer/lists/:id', (req, res) => {
         FOREIGN KEY(ownerId) REFERENCES users(id)
     )`);
 
-    // AUTO-FIX: Adiciona colunas de localização caso a tabela de users já exista sem elas
+    // AUTO-FIX: Colunas extras
     const columns = [
         { name: 'storeName', type: 'TEXT' },
         { name: 'latitude', type: 'REAL' },
@@ -90,7 +59,7 @@ app.delete('/api/consumer/lists/:id', (req, res) => {
     columns.forEach(col => {
         db.run(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`, (err) => {
             if (err && !err.message.includes("duplicate column name")) {
-                console.log(`Nota: Coluna ${col.name} já preparada.`);
+                console.log(`Nota: Coluna ${col.name} ok.`);
             }
         });
     });
@@ -101,7 +70,7 @@ app.delete('/api/consumer/lists/:id', (req, res) => {
 // ==========================================
 function calculateDistance(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 9999;
-    const R = 6371; // Raio da Terra em km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -111,15 +80,15 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 // ==========================================
-// 3. ROTAS DE AUTENTICAÇÃO E SETUP
+// 3. ROTAS DE AUTENTICAÇÃO E LISTAS
 // ==========================================
 
 app.post('/api/auth/register', (req, res) => {
     const { name, email, password, type } = req.body;
-    const sql = `INSERT INTO users (name, email, password, type) VALUES (?, ?, ?, ?)`;
-    db.run(sql, [name, email, password, type || 'consumer'], function(err) {
+    db.run(`INSERT INTO users (name, email, password, type) VALUES (?, ?, ?, ?)`, 
+    [name, email, password, type || 'consumer'], (err) => {
         if (err) return res.status(400).json({ error: "E-mail já cadastrado" });
-        res.json({ id: this.lastID, message: "Conta criada com sucesso!" });
+        res.json({ message: "Conta criada com sucesso!" });
     });
 });
 
@@ -131,18 +100,27 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// Setup da Loja (Vendedor)
 app.put('/api/auth/update-store', (req, res) => {
     const { id, storeName, latitude, longitude } = req.body;
     db.run(`UPDATE users SET storeName = ?, latitude = ?, longitude = ? WHERE id = ?`, 
     [storeName, latitude, longitude, id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Estabelecimento configurado!" });
+        res.json({ message: "Configurado!" });
+    });
+});
+
+// Rota de Salvar Listas
+app.post('/api/consumer/lists', (req, res) => {
+    const { userId, listName, products } = req.body;
+    db.run(`INSERT INTO saved_lists (userId, listName, products) VALUES (?, ?, ?)`, 
+    [userId, listName, JSON.stringify(products)], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Lista salva!" });
     });
 });
 
 // ==========================================
-// 4. PRODUTOS E BUSCA (COSMOS/BLUESOFT)
+// 4. PRODUTOS E BUSCA (COM TRATAMENTO DE ERRO)
 // ==========================================
 
 app.get('/api/products/search', async (req, res) => {
@@ -153,37 +131,33 @@ app.get('/api/products/search', async (req, res) => {
         });
         res.json(response.data);
     } catch (error) {
-        console.error("Erro na Bluesoft:", error.message);
-        res.status(500).json({ error: "Erro ao buscar no catálogo" });
+        res.status(500).json({ error: "Erro na API Bluesoft" });
     }
 });
 
-app.post('/api/products/create-from-gtin', (req, res) => {
+app.post('/api/products/create-from-gtin', async (req, res) => {
     const { gtin, price, stock, ownerId } = req.body;
-    // Primeiro busca o nome na Bluesoft para salvar no banco local
-    axios.get(`https://api.cosmos.bluesoft.com.br/gtins/${gtin}.json`, {
-        headers: { 'X-Cosmos-Token': process.env.COSMOS_TOKEN }
-    }).then(response => {
+    
+    try {
+        const response = await axios.get(`https://api.cosmos.bluesoft.com.br/gtins/${gtin}.json`, {
+            headers: { 'X-Cosmos-Token': process.env.COSMOS_TOKEN }
+        });
+
         const p = response.data;
         const sql = `INSERT INTO products (name, brand, gtin, price, stock, ownerId) VALUES (?, ?, ?, ?, ?, ?)`;
+        
         db.run(sql, [p.description, p.brand ? p.brand.name : 'Genérico', gtin, price, stock, ownerId], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ message: "Produto adicionado ao estoque!" });
+            if (err) return res.status(500).json({ error: "Erro ao salvar no banco" });
+            res.json({ message: "Produto adicionado!" });
         });
-    }).catch(() => res.status(500).json({ error: "GTIN não encontrado" }));
+
+    } catch (error) {
+        console.error("ERRO NO BACKEND:", error.response?.status, error.message);
+        res.status(500).json({ error: "Token inválido ou GTIN não encontrado" });
+    }
 });
 
-app.get('/api/products/all', (req, res) => {
-    db.all(`SELECT * FROM products`, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
-});
-
-// ==========================================
-// 5. RANKING INTELIGENTE (CONSUMIDOR)
-// ==========================================
-
+// Ranking Inteligente
 app.get('/api/consumer/ranking', (req, res) => {
     const { lat, lng, products } = req.query;
     if (!products) return res.json([]);
@@ -202,7 +176,6 @@ app.get('/api/consumer/ranking', (req, res) => {
 
     db.all(sql, gtinList, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-
         const storesMap = {};
         rows.forEach(row => {
             if (!storesMap[row.storeId]) {
@@ -219,14 +192,9 @@ app.get('/api/consumer/ranking', (req, res) => {
             storesMap[row.storeId].itemsFound += 1;
         });
 
-        // Ordenação: 
-        // 1. Mais itens encontrados (Lista completa primeiro)
-        // 2. Mais perto (Menor distância)
-        // 3. Mais barato
         const ranking = Object.values(storesMap).sort((a, b) => {
             if (b.itemsFound !== a.itemsFound) return b.itemsFound - a.itemsFound;
-            if (Math.abs(a.distance - b.distance) > 0.5) return a.distance - b.distance; 
-            return a.totalPrice - b.totalPrice;
+            return a.distance - b.distance;
         });
 
         res.json(ranking);
@@ -234,4 +202,4 @@ app.get('/api/consumer/ranking', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor pronto na porta ${PORT}`));
