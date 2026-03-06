@@ -161,14 +161,39 @@ app.get('/api/consumer/ranking', (req, res) => {
 });
 
 // ==========================================
-// 5. AUTH E OUTRAS ROTAS
+// 3. ROTAS DE AUTENTICAÇÃO
 // ==========================================
+
+// ROTA DE REGISTRO (O que estava dando 404)
+app.post('/api/auth/register', (req, res) => {
+    const { name, email, password, type } = req.body;
+    console.log(`📝 Tentando registrar: ${email} (${type})`);
+
+    const sql = `INSERT INTO users (name, email, password, type) VALUES (?, ?, ?, ?)`;
+    
+    db.run(sql, [name, email, password, type || 'consumer'], function(err) {
+        if (err) {
+            console.error("❌ Erro ao registrar:", err.message);
+            return res.status(400).json({ error: "E-mail já cadastrado ou erro no banco." });
+        }
+        console.log("✅ Usuário criado com ID:", this.lastID);
+        res.json({ id: this.lastID, message: "Conta criada com sucesso!" });
+    });
+});
+
+// ROTA DE LOGIN
 app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
     db.get("SELECT * FROM users WHERE email = ? AND password = ?", [email, password], (err, row) => {
-        if (row) res.json(row);
-        else res.status(401).json({ error: "Inválido" });
+        if (err) return res.status(500).json({ error: "Erro no servidor" });
+        if (row) {
+            console.log(`🔓 Login realizado: ${row.email}`);
+            res.json(row);
+        } else {
+            res.status(401).json({ error: "E-mail ou senha incorretos" });
+        }
     });
+
 });
 
 app.put('/api/auth/update-store', (req, res) => {
