@@ -397,4 +397,4 @@ app.post('/api/consumer/lists', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server ON: ${PORT}`));
->>>>>>> 3319da4 (gtin fixo)
+ 3319da4 (gtin fixo)
