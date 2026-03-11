@@ -50,14 +50,21 @@ export class SellerDashboardComponent implements OnInit {
     this.filteredProducts = this.products.filter(p => p.name?.toLowerCase().includes(term));
   }
 
-  deleteProduct(id: number) {
+ deleteProduct(id: number) {
     if (confirm('Remover este produto?')) {
-      this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe(() => {
-        this.products = this.products.filter(p => p.id !== id);
-        this.filterProducts();
+      // GARANTA QUE O CAMINHO SEJA /products/ (plural) para bater com o server.js
+      this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe({
+        next: () => {
+          this.products = this.products.filter(p => p.id !== id);
+          this.filterProducts();
+        },
+        error: (err) => {
+          console.error("Erro 404 ou 500 ao deletar:", err);
+          alert('Erro ao excluir o produto do servidor.');
+        }
       });
     }
-  }
-
+}
+  
   logout() { this.router.navigate(['/login']); }
 }

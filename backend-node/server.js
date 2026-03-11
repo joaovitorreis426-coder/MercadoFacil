@@ -89,14 +89,14 @@ app.get('/api/products/search', async (req, res) => {
             const mapped = rows.map(r => ({ description: r.name, brand: { name: r.brand }, gtin: r.gtin }));
             return res.json(mapped);
         }
+        // Se não achar local, tenta a API
         try {
             const response = await axios.get(`https://api.cosmos.bluesoft.com.br/products?query=${encodeURIComponent(q)}`, {
-                headers: { 'X-Cosmos-Token': process.env.COSMOS_TOKEN },
-                timeout: 4000
+                headers: { 'X-Cosmos-Token': process.env.COSMOS_TOKEN }
             });
             res.json(response.data);
         } catch (e) {
-            res.json([{ description: `${q} (Manual)`, gtin: q, brand: { name: "Manual" } }]);
+            res.json([{ description: q, gtin: q, brand: { name: "Manual" } }]);
         }
     });
 });
@@ -118,7 +118,16 @@ app.post('/api/products/create-from-gtin', async (req, res) => {
 // LISTAGEM FILTRADA: Só mostra produtos que TÊM dono
 app.get('/api/products/all', (req, res) => {
     db.all("SELECT * FROM products WHERE ownerId IS NOT NULL", (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
         res.json(rows || []);
+    });
+});
+
+app.delete('/api/products/:id', (req, res) => {
+    const { id } = req.params;
+    db.run("DELETE FROM products WHERE id = ?", [id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Removido" });
     });
 });
 
