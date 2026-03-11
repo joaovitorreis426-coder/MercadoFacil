@@ -1,59 +1,56 @@
-<div class="min-h-screen bg-slate-50 p-4 sm:p-8 font-sans">
-  <div class="max-w-5xl mx-auto">
+<div class="min-h-screen bg-slate-50 p-6">
+  <div class="max-w-6xl mx-auto">
     
-    <div class="flex justify-between items-center mb-8">
-      <div>
-        <h1 class="text-2xl font-black text-slate-800 italic">MERCADO FÁCIL</h1>
-        <p class="text-slate-500">Bem-vindo, {{ userName }}</p>
-      </div>
-      <button routerLink="/login" class="text-sm font-bold text-red-500">Sair</button>
+    <div class="flex justify-between items-center mb-10">
+      <h1 class="text-2xl font-black text-slate-800 italic uppercase">MERCADO FÁCIL</h1>
+      <button (click)="logout()" class="text-red-500 font-bold">Sair</button>
     </div>
 
     @if (!storeConfigured) {
-      <div class="bg-red-50 border-2 border-red-200 p-8 rounded-3xl mb-8 flex flex-col items-center text-center animate-bounce">
-        <div class="bg-red-500 text-white p-4 rounded-full mb-4 shadow-lg shadow-red-200">
-          <lucide-icon [img]="MapPinIcon" class="w-8 h-8"></lucide-icon>
-        </div>
-        <h2 class="text-red-900 font-black text-xl mb-2">Atenção: Loja não Localizada!</h2>
-        <p class="text-red-700 mb-6 max-w-md">Para cadastrar produtos e aparecer no ranking dos clientes, você precisa configurar o nome da sua loja e sua localização GPS.</p>
-        <button routerLink="/seller/setup" class="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-2xl font-black shadow-xl transition-transform active:scale-95">
-          CONFIGURAR MINHA LOJA AGORA
-        </button>
+      <div class="bg-red-600 text-white p-6 rounded-3xl mb-8 flex justify-between items-center shadow-lg">
+        <p class="font-bold uppercase italic text-sm">Configure sua localização para cadastrar produtos!</p>
+        <a routerLink="/seller/setup" class="bg-white text-red-600 px-6 py-2 rounded-xl font-black text-xs">CONFIGURAR</a>
       </div>
     }
 
-    <div [class.opacity-40]="!storeConfigured" [class.pointer-events-none]="!storeConfigured">
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2">
-          <lucide-icon [img]="PackageIcon" class="w-5 h-5"></lucide-icon> Meu Estoque
-        </h3>
-        <button routerLink="/seller/products/new" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-100">
-          <lucide-icon [img]="PlusIcon" class="w-5 h-5"></lucide-icon> Novo Produto
-        </button>
+    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-8 flex items-center gap-6">
+      <div class="bg-blue-600 text-white p-4 rounded-2xl">
+        <lucide-icon [img]="PackageIcon" class="w-8 h-8"></lucide-icon>
       </div>
+      <div>
+        <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Produtos no seu Mercado</p>
+        <p class="text-4xl font-black text-slate-800">{{ products.length }}</p>
+      </div>
+    </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        @for (product of products; track product.id) {
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h4 class="font-bold text-slate-800 text-lg mb-1">{{ product.name }}</h4>
-            <p class="text-xs text-slate-400 mb-4 uppercase font-bold tracking-widest">{{ product.brand }}</p>
-            <div class="flex justify-between items-end">
-              <div>
-                <p class="text-[10px] text-slate-400 uppercase font-bold">Preço</p>
-                <p class="text-2xl font-black text-green-600">R$ {{ product.price.toFixed(2) }}</p>
-              </div>
-              <div class="text-right">
-                <p class="text-[10px] text-slate-400 uppercase font-bold">Estoque</p>
-                <p class="font-bold text-slate-700">{{ product.stock }} un</p>
-              </div>
-            </div>
+    <div class="flex flex-col md:flex-row gap-4 mb-10">
+      <input type="text" [(ngModel)]="searchTerm" (input)="filterProducts()" placeholder="Buscar produto..." class="flex-1 p-5 rounded-2xl border-2 border-slate-200 outline-none focus:border-blue-600 font-bold">
+      <a [routerLink]="storeConfigured ? '/seller/products/new' : null" 
+         [class.opacity-50]="!storeConfigured"
+         class="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black text-center shadow-lg">
+        + NOVO PRODUTO
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      @for (product of filteredProducts; track product.id) {
+        <div class="bg-white p-6 rounded-[2.5rem] border border-slate-200">
+          <p class="text-[10px] font-black text-slate-400 uppercase mb-2">GTIN: {{ product.gtin }}</p>
+          <h3 class="font-black text-slate-800 text-xl uppercase italic mb-6">{{ product.name }}</h3>
+          
+          <div class="flex justify-between items-center mb-6">
+            <span class="text-2xl font-black text-green-600">R$ {{ product.price }}</span>
+            <span class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-black text-sm">{{ product.stock }} un</span>
           </div>
-        } @empty {
-          <div class="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
-            <p class="text-slate-400 font-medium">Nenhum produto cadastrado ainda.</p>
+
+          <div class="flex gap-2">
+            <button class="flex-1 bg-slate-100 text-slate-600 font-black py-3 rounded-xl text-xs">EDITAR</button>
+            <button (click)="deleteProduct(product.id)" class="px-4 bg-red-50 text-red-500 rounded-xl">
+              <lucide-icon [img]="Trash2Icon" class="w-5 h-5"></lucide-icon>
+            </button>
           </div>
-        }
-      </div>
+        </div>
+      }
     </div>
 
   </div>

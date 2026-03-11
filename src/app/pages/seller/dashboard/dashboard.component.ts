@@ -17,7 +17,6 @@ export class SellerDashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  // Ícones
   readonly PackageIcon = Package; readonly SearchIcon = Search; readonly Edit2Icon = Edit2; 
   readonly Trash2Icon = Trash2; readonly PlusIcon = Plus; readonly TagIcon = Tag; 
   readonly BoxIcon = Box; readonly MapPinIcon = MapPin;
@@ -29,24 +28,16 @@ export class SellerDashboardComponent implements OnInit {
   storeConfigured = false;
 
   ngOnInit() { 
-    this.checkStoreStatus();
-    this.fetchProducts(); 
-  }
-
-  checkStoreStatus() {
     const user = this.authService.currentUser();
-    // Verifica se a loja já foi configurada para liberar o cadastro
-    if (user && user.storeName && user.latitude) {
-      this.storeConfigured = true;
-    }
+    if (user && user.storeName && user.latitude) this.storeConfigured = true;
+    this.fetchProducts(); 
   }
 
   fetchProducts() {
     const user = this.authService.currentUser();
     this.http.get<any[]>('https://mercadofacil-hrvh.onrender.com/api/products/all').subscribe({
       next: (data) => {
-        // Filtra apenas produtos deste vendedor logado
-        this.products = user ? data.filter(p => p.ownerId === user.id) : data;
+        this.products = user ? data.filter(p => p.ownerId === user.id) : [];
         this.filteredProducts = [...this.products];
         this.isLoading = false;
       },
@@ -56,41 +47,17 @@ export class SellerDashboardComponent implements OnInit {
 
   filterProducts() {
     const term = this.searchTerm.toLowerCase();
-    this.filteredProducts = this.products.filter(p => 
-      p.name?.toLowerCase().includes(term) || 
-      p.gtin?.includes(term)
-    );
-  }
-
-  editProduct(product: any) {
-    const newPrice = prompt(`Atualizar preço de ${product.name}:`, product.price);
-    if (newPrice !== null && newPrice.trim() !== '') {
-      const parsedPrice = parseFloat(newPrice.replace(',', '.'));
-      if (isNaN(parsedPrice)) return alert('❌ Valor inválido.');
-
-      this.http.put(`https://mercadofacil-hrvh.onrender.com/api/products/${product.id}`, { price: parsedPrice.toString() }).subscribe({
-        next: () => { 
-          product.price = parsedPrice.toString(); 
-          alert('✅ Preço atualizado!'); 
-        },
-        error: () => alert('❌ Erro ao atualizar.')
-      });
-    }
+    this.filteredProducts = this.products.filter(p => p.name?.toLowerCase().includes(term));
   }
 
   deleteProduct(id: number) {
-    if (confirm('Deseja remover este item do catálogo?')) {
-      this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe({
-        next: () => { 
-          this.products = this.products.filter(p => p.id !== id); 
-          this.filterProducts(); 
-        },
-        error: () => alert('❌ Erro ao excluir.')
+    if (confirm('Remover este produto?')) {
+      this.http.delete(`https://mercadofacil-hrvh.onrender.com/api/products/${id}`).subscribe(() => {
+        this.products = this.products.filter(p => p.id !== id);
+        this.filterProducts();
       });
     }
   }
 
-  logout() {
-    this.router.navigate(['/login']);
-  }
+  logout() { this.router.navigate(['/login']); }
 }
